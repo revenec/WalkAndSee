@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="wrap_content"
+    android:padding="6dip" >
+
+    <ImageView
+        android:id="@+id/imagePlace"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_alignParentTop="true"
+        android:foregroundGravity="center_vertical"
+        android:layout_marginLeft="6dip"
+        android:layout_marginRight="6dip"/>
+
+    <TextView
+        android:id="@+id/namePlace"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignWithParentIfMissing="true"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentRight="true"
+        android:layout_toRightOf="@id/imagePlace"
+        android:gravity="center_vertical"
+        android:lineSpacingExtra="8sp"
+        android:text="Example application"
+        android:textSize="16sp" />
+
+    <TextView
+        android:id="@+id/addressDistance"
+        android:layout_width="335dp"
+        android:layout_height="wrap_content"
+        android:layout_alignWithParentIfMissing="true"
+        android:layout_alignTop="@id/namePlace"
+        android:layout_alignParentRight="true"
+        android:layout_marginTop="20dp"
+        android:layout_marginRight="8dp"
+        android:layout_toRightOf="@id/imagePlace"
+        android:gravity="center_vertical"
+        android:lines="3"
+        android:scrollHorizontally="false"
+        android:textSize="12sp" />
+
+</RelativeLayout>
