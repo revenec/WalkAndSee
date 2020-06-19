@@ -5,7 +5,7 @@ import android.widget.Toast;
 
 public class Utilities
 {
-    public static String key = "AIzaSyA6wAEdMMZUukPstnWaex9FDCnMA9cTOS4";
+    public static final String key = "AIzaSyBdqGweqcB97eit2khrIBE6yagMjSb8dIg";
     public static boolean isBlank(String text)
     {
         if(text == null)
