@@ -1,5 +1,6 @@
 package mvf.mikevidev.walkandsee;
 
+import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentActivity;
@@ -51,9 +52,39 @@ public class SearchPlacesActivity extends FragmentActivity implements OnMapReady
     public static final String RESTAURANT_TYPE = "restaurant";
     public static final String NIGHT_CLUB_TYPE = "night_club";
     public static final String BAR_TYPE = "bar";
-    public static final int MAX_RADIUS = 10000;
-    public static final int MIN_RADIUS = 50;
+    public static final int MAX_RADIUS = 5000;
+    public static final int MIN_RADIUS = 100;
     public static final int INCREASE_RADIUS = 50;
+    public static final float MIN_ZOOM = 11.7f;
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        //Check if the user grants permission
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED ||
+                Build.VERSION.SDK_INT < 23) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, 1);
+        } else {
+            //if the user has already give permission, the process will jump the pop up
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 3, locationListener);
+            //Get the current location at the begin and add a list of the places
+            locationUser = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+            if (locationUser == null) {
+                locationUser = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+            }
+            if (locationUser != null) {
+                // Add a marker in Sydney and move the camera
+                sbRadious.setProgress(MIN_RADIUS);
+                increaseAndDecreaseZoom(sbRadious.getProgress());
+
+            }
+            else
+            {
+                Utilities.toastMessage("There is not signal. check your internet connection or your GPS and try again",getApplicationContext());
+            }
+        }
+    }
+
     public void goFindPlaces(View view)
     {
         //Variable to hold the parameters
@@ -210,22 +241,16 @@ public class SearchPlacesActivity extends FragmentActivity implements OnMapReady
     public void increaseAndDecreaseZoom(int barProgress)
     {
         mMap.clear();
-        Log.i("VALUE","Progress (Bar): " + barProgress);
-        float value = (barProgress / 100);
-        Log.i("VALUE","Progress (zoom): " + value);
-        value = 20 - (value * 2);
-        Log.i("VALUE","Progress Final (zoom): " + value);
-        if(barProgress == 300)
-        {
-            value = 15.8f;
-        }
-        if(value < 12.5f)
-        {
-            value = 12.5f;
-        }
+        Log.i("increaseAndDecreaseZoom","Progress: " + barProgress);
+        //The zoom will be between 20 (max zoom allowed in Google maps) and the minimun which adjust to the screen
+        float flZoomThreshold = 20 - MIN_ZOOM;
+        //Calculate the percentage to discount to the max zoom based on the percentage we increase the radius and considering the threshold
+        float flzoom = 20 - ((flZoomThreshold / 100) * ((barProgress * 100) / MAX_RADIUS));
+
+        Log.i("increaseAndDecreaseZoom","flzoom: " + flzoom);
         LatLng currentLocation = new LatLng(locationUser.getLatitude(), locationUser.getLongitude());
         mMap.addMarker(new MarkerOptions().position(currentLocation).title("You are here"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation,value));
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation,flzoom));
         mMap.addCircle(new CircleOptions()
                 .center(currentLocation)
                 .radius(barProgress)
