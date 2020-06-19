@@ -51,7 +51,9 @@ public class SearchPlacesActivity extends FragmentActivity implements OnMapReady
     public static final String RESTAURANT_TYPE = "restaurant";
     public static final String NIGHT_CLUB_TYPE = "night_club";
     public static final String BAR_TYPE = "bar";
-
+    public static final int MAX_RADIUS = 10000;
+    public static final int MIN_RADIUS = 50;
+    public static final int INCREASE_RADIUS = 50;
     public void goFindPlaces(View view)
     {
         //Variable to hold the parameters
@@ -158,9 +160,9 @@ public class SearchPlacesActivity extends FragmentActivity implements OnMapReady
         mMap = googleMap;
 
         sbRadious = findViewById(R.id.sbDistance);
-        sbRadious.setMax(3000);
-        sbRadious.setMin(0);
-        sbRadious.setProgress(50);
+        sbRadious.setMax(MAX_RADIUS);
+        sbRadious.setMin(MIN_RADIUS);
+        sbRadious.setProgress(INCREASE_RADIUS);
         sbRadious.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser)
@@ -193,8 +195,8 @@ public class SearchPlacesActivity extends FragmentActivity implements OnMapReady
             }
             if (locationUser != null) {
                 // Add a marker in Sydney and move the camera
-                sbRadious.setProgress(300);
-                increaseAndDecreaseZoom(300);
+                sbRadious.setProgress(MIN_RADIUS);
+                increaseAndDecreaseZoom(sbRadious.getProgress());
 
             }
             else
