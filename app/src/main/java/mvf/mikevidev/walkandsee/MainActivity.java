@@ -22,7 +22,7 @@ public class MainActivity extends AppCompatActivity {
         }
         else
         {
-
+            goToStartMenu();
         }
 
     }
