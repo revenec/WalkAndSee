@@ -17,6 +17,7 @@ import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Parcelable;
 import android.os.Trace;
 import android.util.Log;
 import android.widget.TextView;
@@ -61,6 +62,7 @@ public class LoadingPlacesActivity extends AppCompatActivity {
     public static WalkAndSeePlace walkAndSeePlace;
     public int totalResults;
     public TextView tvMessage;
+    public HashMap<String,String> mapPlaceIdToPhotoReferences;
 
     public class DownloadData extends AsyncTask<String, Void, String> {
         @Override
@@ -69,17 +71,28 @@ public class LoadingPlacesActivity extends AppCompatActivity {
 
             try {
 
-                BufferedReader in = new BufferedReader(new InputStreamReader(new URL(urls[0]).openStream()));
-                String input;
-                StringBuffer stringBuffer = new StringBuffer();
-                while ((input = in.readLine()) != null) {
-                    stringBuffer.append(input);
+                for(String url : urls)
+                {
+                    BufferedReader in = new BufferedReader(new InputStreamReader(new URL(url).openStream()));
+                    String input;
+                    StringBuffer stringBuffer = new StringBuffer();
+                    while ((input = in.readLine()) != null) {
+                        stringBuffer.append(input);
+                    }
+                    in.close();
+
+                    if(!stringBuffer.toString().contains("ZERO_RESULTS"))
+                    {
+                        result += stringBuffer.toString() + "___";
+                    }
+                    Thread.sleep(1000);
                 }
-                in.close();
-                result = stringBuffer.toString();
+
             } catch (MalformedURLException e) {
                 e.printStackTrace();
             } catch (IOException e) {
+                e.printStackTrace();
+            } catch (InterruptedException e) {
                 e.printStackTrace();
             }
             return result;
@@ -89,10 +102,33 @@ public class LoadingPlacesActivity extends AppCompatActivity {
         protected void onPostExecute(String result) {
             super.onPostExecute(result);
             //after execution fill up the list view with the locations
-            for (String placeId : getPlaceIds(result)) {
-                Log.i("PLACE_ID_REQUEST: ",placeId);
-                getPlace(placeId);
+            String response;
+            try {
+                JSONObject JSONResult = new JSONObject(result);
+                response = JSONResult.getString("status");
+            } catch (JSONException e) {
+                e.printStackTrace();
+                response = "ZERO_RESULTS";
             }
+            Log.i("Places:",response);
+
+            if("ZERO_RESULTS".equals(response))
+            {
+                HashMap<String,Object> data = new HashMap<String,Object>();
+                data.put("namePlace","No places found");
+                lstMapLitViewAttributeToData.add(data);
+                Intent intent = new Intent(getApplicationContext(),PlacesActivity.class);
+                startActivity(intent);
+                finish();
+            }
+            else
+            {
+                for (String placeId : getPlaceIds(result)) {
+                    Log.i("PLACE_ID_REQUEST: ",placeId);
+                    getPlace(placeId);
+                }
+            }
+
             Log.i("Places: ", result);
         }
 
@@ -119,6 +155,7 @@ public class LoadingPlacesActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_loading_places);
         mapPlaceIdToDistanceCurrentLocation = new HashMap<>();
+        mapPlaceIdToPhotoReferences = new HashMap<>();
         locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
         intRadiusFromScreen = getIntent().getIntExtra("intRadius",0);
         strPlaceTypeFromScreen = (ArrayList<String>)getIntent().getSerializableExtra("placesType");
@@ -141,6 +178,12 @@ public class LoadingPlacesActivity extends AppCompatActivity {
                 Utilities.toastMessage("Check your internet connection, something is not working :(", getApplicationContext());
             }
         };
+    }
+
+    @Override
+    protected void onResume()
+    {
+        super.onResume();
         initPlaceSearch();
     }
 
@@ -157,8 +200,16 @@ public class LoadingPlacesActivity extends AppCompatActivity {
             if (locationUser == null) {
                 locationUser = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
             }
-            if (locationUser != null) {
-                getPlacesFromGoogleMaps(locationUser, intRadiusFromScreen, strPlaceTypeFromScreen, strSpecificPlace);
+            if (locationUser != null)
+            {
+                new Thread()
+                {
+                    @Override
+                    public void run()
+                    {
+                        getPlacesFromGoogleMaps(locationUser, intRadiusFromScreen, strPlaceTypeFromScreen, strSpecificPlace);
+                    }
+                }.start();
             }
             else
             {
@@ -171,8 +222,8 @@ public class LoadingPlacesActivity extends AppCompatActivity {
         DownloadData download = new DownloadData();
         ArrayList<String> urlsArray = new ArrayList<>();
 
-        try {
-
+        try
+        {
             for(int i = 0; i< lstPlaceTypes.size(); i++)
             {
                 StringBuilder url = new StringBuilder("https://maps.googleapis.com/maps/api/place/nearbysearch/json?");
@@ -212,7 +263,7 @@ public class LoadingPlacesActivity extends AppCompatActivity {
         Trace.beginSection("SessionGetPlaces");
 
         //Set the information we want to retrieve from google
-        List<Place.Field> placeFields = Arrays.asList(Place.Field.ID, Place.Field.NAME, Place.Field.ADDRESS, Place.Field.LAT_LNG, Place.Field.PHOTO_METADATAS);
+        List<Place.Field> placeFields = Arrays.asList(Place.Field.ID, Place.Field.NAME, Place.Field.ADDRESS, Place.Field.LAT_LNG, Place.Field.PHOTO_METADATAS,Place.Field.TYPES);
 
         // Construct a request object, passing the place ID and fields array.
         FetchPlaceRequest request = FetchPlaceRequest.newInstance(placeId, placeFields);
@@ -231,28 +282,43 @@ public class LoadingPlacesActivity extends AppCompatActivity {
             if (place.getLatLng() != null)
             {
                 //Get list of places to operate in the future
-                String distanceFormatted = String.valueOf((Math.round((mapPlaceIdToDistanceCurrentLocation.get(place.getId()) / 1000)* 100.00) / 100.00));
-                try
+                String distanceFormatted = "";
+                float flDistance = 0.00f;
+                if(mapPlaceIdToDistanceCurrentLocation.get(place.getId()) != null)
                 {
-                    Log.i("DISTANCE_STR",distanceFormatted);
-                    Log.i("DISTANCE_STR_L",String.valueOf(distanceFormatted.split(".").length));
-                    if(distanceFormatted.split("\\.").length == 1)
+                    flDistance = mapPlaceIdToDistanceCurrentLocation.get(place.getId());
+                    if(flDistance < 1000)
                     {
-                        Log.i("DISTANCE_STR","inside option 1");
-                        distanceFormatted += ".00";
+                        distanceFormatted = String.valueOf(Math.round(flDistance));
                     }
-                    else if(distanceFormatted.split("\\.").length == 2 && distanceFormatted.split("\\.")[1].length() < 2)
+                    else
                     {
-                        Log.i("DISTANCE_STR","inside option 2");
-                        distanceFormatted += "0";
+                        distanceFormatted = String.valueOf((Math.round((flDistance / 1000)* 100.00) / 100.00));
+                        try
+                        {
+                            Log.i("DISTANCE_STR",distanceFormatted);
+                            Log.i("DISTANCE_STR_L",String.valueOf(distanceFormatted.split(".").length));
+                            if(distanceFormatted.split("\\.").length == 1)
+                            {
+                                Log.i("DISTANCE_STR","inside option 1");
+                                distanceFormatted += ".00";
+                            }
+                            else if(distanceFormatted.split("\\.").length == 2 && distanceFormatted.split("\\.")[1].length() < 2)
+                            {
+                                Log.i("DISTANCE_STR","inside option 2");
+                                distanceFormatted += "0";
+                            }
+                        }
+                        catch(Exception e)
+                        {
+                            distanceFormatted = "No distance available";
+                        }
                     }
+
                 }
-                catch(Exception e)
-                {
-                    distanceFormatted = "No distance available";
-                }
+
                 mapData.put("distance_sort",mapPlaceIdToDistanceCurrentLocation.get(place.getId()));
-                mapData.put("address", place.getAddress() + " \nDistance: " + distanceFormatted + " Km");
+                mapData.put("address", place.getAddress() + " \nDistance: " + distanceFormatted + (flDistance < 1000 ? " Mts" : " Kms"));
                 Log.i("PLACE_ID_REQUEST_2: ",place.getId());
                 walkAndSeePlace = new WalkAndSeePlace(place.getName(), place.getId(), place.getLatLng(), null, place.getAddress() + " \nDistance: " + (Math.round(mapPlaceIdToDistanceCurrentLocation.get(place.getId())* 100.00) / 100.00) + " Mls",mapPlaceIdToDistanceCurrentLocation.get(place.getId()));
 
@@ -340,9 +406,9 @@ public class LoadingPlacesActivity extends AppCompatActivity {
                     }
                 }
                 Intent intent = new Intent(getApplicationContext(),PlacesActivity.class);
+                intent.putExtra("intRadius",intRadiusFromScreen);
                 startActivity(intent);
                 finish();
-                //arrAdapter.notifyDataSetChanged();
             }
 
         });
@@ -376,21 +442,34 @@ public class LoadingPlacesActivity extends AppCompatActivity {
             locationEndPoint =  locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
         }
         try {
-            JSONObject jsonObject = new JSONObject(JSONString);
-            JSONArray arrResults = jsonObject.getJSONArray("results");
-            for(int i = 0; i < arrResults.length();i++)
+
+            for(String results : JSONString.split("___"))
             {
-                JSONObject info = arrResults.getJSONObject(i).getJSONObject("geometry");
-                JSONObject infoLoc = info.getJSONObject("location");
-                double latitude = (double) infoLoc.get("lat");
-                double longitude = (double) infoLoc.get("lng");
-                locationEndPoint.setLongitude(longitude);
-                locationEndPoint.setLatitude(latitude);
-                Log.i("LOCATION_USER",locationUser.toString());
-                Log.i("LOCATION_END_POINT",locationEndPoint.toString());
-                mapDistanceToPositionList.put(locationUser.distanceTo(locationEndPoint),pos);
-                mapPositionListToPlaceId.put(pos,arrResults.getJSONObject(i).getString("place_id"));
-                pos++;
+                JSONObject jsonObject = new JSONObject(results);
+                JSONArray arrResults = jsonObject.getJSONArray("results");
+                for(int i = 0; i < arrResults.length();i++)
+                {
+                    JSONObject info = arrResults.getJSONObject(i).getJSONObject("geometry");
+                    JSONObject infoLoc = info.getJSONObject("location");
+                    double latitude = (double) infoLoc.get("lat");
+                    double longitude = (double) infoLoc.get("lng");
+                    locationEndPoint.setLongitude(longitude);
+                    locationEndPoint.setLatitude(latitude);
+                    Log.i("LOCATION_USER",locationUser.toString());
+                    Log.i("LOCATION_END_POINT",locationEndPoint.toString());
+                    mapDistanceToPositionList.put(locationUser.distanceTo(locationEndPoint),pos);
+                    mapPositionListToPlaceId.put(pos,arrResults.getJSONObject(i).getString("place_id"));
+                    if(arrResults.getJSONObject(i).toString().contains("photos"))
+                    {
+                        JSONArray arrResultsPhotos = arrResults.getJSONObject(i).getJSONArray("photos");
+                        if(arrResultsPhotos.length() > 0)
+                        {
+                            mapPlaceIdToPhotoReferences.put(arrResults.getJSONObject(i).getString("place_id"),arrResultsPhotos.getJSONObject(0).getString("photo_reference"));
+                        }
+                    }
+
+                    pos++;
+                }
             }
 
             for(Float key : mapDistanceToPositionList.keySet())
@@ -398,12 +477,19 @@ public class LoadingPlacesActivity extends AppCompatActivity {
                 lstPlaceIds.add(mapPositionListToPlaceId.get(mapDistanceToPositionList.get(key)));
                 mapPlaceIdToDistanceCurrentLocation.put(mapPositionListToPlaceId.get(mapDistanceToPositionList.get(key)),key);
             }
-
+            Log.i("Photos",mapPlaceIdToPhotoReferences.toString());
         } catch (JSONException e) {
             e.printStackTrace();
+            finish();
         }
         //Get this value to find out when the process will finish, so we can order the places for distance in ascending order
         this.totalResults = lstPlaceIds.size();
         return lstPlaceIds;
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        System.gc();
     }
 }

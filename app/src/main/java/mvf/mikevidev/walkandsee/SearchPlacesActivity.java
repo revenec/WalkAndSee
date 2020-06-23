@@ -10,12 +10,14 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.graphics.Point;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Display;
 import android.view.View;
 import android.widget.CheckBox;
 import android.widget.SeekBar;
@@ -24,6 +26,8 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptor;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.Circle;
 import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
@@ -55,7 +59,8 @@ public class SearchPlacesActivity extends FragmentActivity implements OnMapReady
     public static final int MAX_RADIUS = 5000;
     public static final int MIN_RADIUS = 100;
     public static final int INCREASE_RADIUS = 50;
-    public static final float MIN_ZOOM = 11.7f;
+    public static final float MIN_ZOOM = 11.8f;
+    public static float MAX_ZOOM = 17.45f;
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
@@ -75,7 +80,7 @@ public class SearchPlacesActivity extends FragmentActivity implements OnMapReady
             if (locationUser != null) {
                 // Add a marker in Sydney and move the camera
                 sbRadious.setProgress(MIN_RADIUS);
-                increaseAndDecreaseZoom(sbRadious.getProgress());
+                increaseAndDecreaseZoom(sbRadious.getProgress(),true);
 
             }
             else
@@ -138,7 +143,7 @@ public class SearchPlacesActivity extends FragmentActivity implements OnMapReady
             //Open Places Activity passing per parameter the radius and the options selected if "Show All is not selected"
             Intent intent = new Intent(getApplicationContext(),LoadingPlacesActivity.class);
             Log.i("PROGRESS","Progress: " + sbRadious.getProgress());
-            intent.putExtra("intRadius",(sbRadious.getProgress() * 2));
+            intent.putExtra("intRadius",sbRadious.getProgress());
             intent.putExtra("placesType",params);
             startActivity(intent);
         }
@@ -155,14 +160,19 @@ public class SearchPlacesActivity extends FragmentActivity implements OnMapReady
         cbShowMuseums = findViewById(R.id.museumsOpt);
         cbShowNightClubs = findViewById(R.id.nightClubsOpt);
         cbShowBars = findViewById(R.id.barsOpt);
-
+        screenAdjustments();
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
         locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
         locationListener = new LocationListener() {
             @Override
-            public void onLocationChanged(Location location) {}
+            public void onLocationChanged(Location location)
+            {
+                locationUser = location;
+                sbRadious.setProgress(MIN_RADIUS);
+                increaseAndDecreaseZoom(sbRadious.getProgress(),true);
+            }
 
             @Override
             public void onStatusChanged(String provider, int status, Bundle extras) {}
@@ -175,6 +185,30 @@ public class SearchPlacesActivity extends FragmentActivity implements OnMapReady
                 Utilities.toastMessage("Check your internet connection, something is not working :(", getApplicationContext());
             }
         };
+    }
+
+    private void screenAdjustments()
+    {
+        //Get the max zoom based on the device
+        Display display = getWindowManager().getDefaultDisplay();
+        Point size = new Point(); display. getSize(size);
+        Log.i("screenAdjustments", "size" + size.x);
+        switch(size.x)
+        {
+            case 1440:
+                MAX_ZOOM = 17.8f;
+                break;
+            case 480:
+                MAX_ZOOM = 17.3f;
+                cbShowAll.setTextSize(12);
+                cbShowRestaurants.setTextSize(12);
+                cbShowParks.setTextSize(12);
+                cbShowMuseums.setTextSize(12);
+                cbShowNightClubs.setTextSize(12);
+                cbShowBars.setTextSize(12);
+                break;
+            default:
+        }
     }
 
     /**
@@ -199,7 +233,7 @@ public class SearchPlacesActivity extends FragmentActivity implements OnMapReady
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser)
             {
                 //Get the progress and make zoom +/- based if the progress increase or decrease
-                increaseAndDecreaseZoom(progress);
+                increaseAndDecreaseZoom(progress,false);
             }
 
             @Override
@@ -227,7 +261,7 @@ public class SearchPlacesActivity extends FragmentActivity implements OnMapReady
             if (locationUser != null) {
                 // Add a marker in Sydney and move the camera
                 sbRadious.setProgress(MIN_RADIUS);
-                increaseAndDecreaseZoom(sbRadious.getProgress());
+                increaseAndDecreaseZoom(sbRadious.getProgress(),true);
 
             }
             else
@@ -237,24 +271,83 @@ public class SearchPlacesActivity extends FragmentActivity implements OnMapReady
         }
 
     }
-
-    public void increaseAndDecreaseZoom(int barProgress)
+    //increase the zoom and the circle based on the distance
+    public void increaseAndDecreaseZoom(int barProgress, boolean blnUseDynamic)
     {
         mMap.clear();
-        Log.i("increaseAndDecreaseZoom","Progress: " + barProgress);
-        //The zoom will be between 20 (max zoom allowed in Google maps) and the minimun which adjust to the screen
-        float flZoomThreshold = 20 - MIN_ZOOM;
-        //Calculate the percentage to discount to the max zoom based on the percentage we increase the radius and considering the threshold
-        float flzoom = 20 - ((flZoomThreshold / 100) * ((barProgress * 100) / MAX_RADIUS));
-
-        Log.i("increaseAndDecreaseZoom","flzoom: " + flzoom);
         LatLng currentLocation = new LatLng(locationUser.getLatitude(), locationUser.getLongitude());
-        mMap.addMarker(new MarkerOptions().position(currentLocation).title("You are here"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation,flzoom));
+        mMap.addMarker(new MarkerOptions().position(currentLocation).title("You are here").icon(BitmapDescriptorFactory.fromResource(R.drawable.lognoletters1_logo)).anchor(0.5f,0.5f));
+        if(blnUseDynamic)
+        {
+            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLocation,MAX_ZOOM));
+        }
+        else
+        {
+            //The zoom will be between 20 (max zoom allowed in Google maps) and the minimun which adjust to the screen
+            /*float flZoomThreshold = MAX_ZOOM - MIN_ZOOM;
+            float percentatgeProgress = (barProgress * 100) / (MAX_RADIUS - MIN_RADIUS);
+            float substract = flZoomThreshold * (percentatgeProgress / 100);
+            //Calculate the percentage to discount to the max zoom based on the percentage we increase the radius and considering the threshold
+            float flzoom = MAX_ZOOM - (substract * substract);
+
+            if(flzoom < MIN_ZOOM || barProgress == MAX_RADIUS)
+            {
+                flzoom = MIN_ZOOM;
+            }
+            if(flzoom > MAX_ZOOM || barProgress == MIN_RADIUS)
+            {
+                flzoom = MAX_ZOOM;
+            }*/
+
+            float flzoom = 0f;
+            if(barProgress == MIN_RADIUS)
+            {
+                flzoom = MAX_ZOOM;
+            }
+            else if(barProgress > MIN_RADIUS && barProgress <= 150)
+            {
+                flzoom = MAX_ZOOM - 0.5f;
+            }
+            else if(barProgress > 150 && barProgress <= 500)
+            {
+                flzoom = MAX_ZOOM - 2.2f;
+            }
+            else if(barProgress > 500 && barProgress <= 700)
+            {
+                flzoom = MAX_ZOOM - 2.8f;
+            }
+            else if(barProgress > 700 && barProgress <= 1200)
+            {
+                flzoom = MAX_ZOOM - 3.5f;
+            }
+            else if(barProgress > 1200 && barProgress < 4900)
+            {
+                //The zoom will be between 20 (max zoom allowed in Google maps) and the minimun which adjust to the screen
+                float flZoomThreshold = (MAX_ZOOM - 3.5f) - MIN_ZOOM;
+                float percentatgeProgress = (barProgress * 100) / (MAX_RADIUS - MIN_RADIUS);
+                float substract = flZoomThreshold * (percentatgeProgress / 100);
+                //Calculate the percentage to discount to the max zoom based on the percentage we increase the radius and considering the threshold
+                if(barProgress > 2500 && barProgress < 4500)
+                {
+                    substract += 0.2f;
+                }
+                flzoom = (MAX_ZOOM - 3.5f) - substract;
+            }
+            else
+            {
+                flzoom = MIN_ZOOM;
+            }
+            //Log.i("increaseAndDecreaseZoom","substract: " + substract);
+            Log.i("increaseAndDecreaseZoom","Progress: " + barProgress);
+            Log.i("increaseAndDecreaseZoom","flzoom: " + flzoom);
+            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation,flzoom));
+        }
+
         mMap.addCircle(new CircleOptions()
                 .center(currentLocation)
                 .radius(barProgress)
-                .strokeColor(Color.RED));
+                .strokeWidth(5)
+                .strokeColor(Color.parseColor(Utilities.basicColorApp)));
     }
 
 }

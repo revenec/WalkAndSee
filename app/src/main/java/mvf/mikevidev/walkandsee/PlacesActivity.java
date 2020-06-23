@@ -61,13 +61,14 @@ public class PlacesActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_places);
-        lvPlaces = findViewById(R.id.lvPlaces);
-        //mapPlaceIdToDistanceCurrentLocation = new HashMap<>();
+        int radius = getIntent().getIntExtra("intRadius",0);
+        setTitle("Places within "  + (radius < 1000 ? radius + " Mts" : (radius/1000) + " Kms"));
+        lvPlaces = findViewById(R.id.rvPlaces);
         String[] from = {"imagePlace", "namePlace", "address"};
         int[] to = {R.id.imagePlace, R.id.namePlace, R.id.addressDistance};
         arrAdapter = new WalkAndSeePlaceAdapter(getApplicationContext(), LoadingPlacesActivity.lstMapLitViewAttributeToData, R.layout.places_view, from, to);
         lvPlaces.setAdapter(arrAdapter);
-
+        arrAdapter.notifyDataSetChanged();
         lvPlaces.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
