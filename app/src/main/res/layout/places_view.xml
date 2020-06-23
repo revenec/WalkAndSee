@@ -5,51 +5,60 @@
     android:padding="6dip" >
 
     <ImageView
-        android:id="@+id/imagePlace"
+        android:id="@+id/ivPlace"
         android:layout_width="50dp"
         android:layout_height="50dp"
         android:layout_alignParentStart="true"
         android:layout_alignParentTop="true"
-        android:layout_marginStart="12dp"
+        android:layout_marginStart="9dp"
         android:layout_marginLeft="6dip"
+        android:layout_marginTop="13dp"
         android:layout_marginRight="6dip"
         android:foregroundGravity="center_vertical" />
 
     <TextView
         android:id="@+id/namePlace"
-        android:layout_width="fill_parent"
+        android:layout_width="309dp"
         android:layout_height="wrap_content"
         android:layout_alignWithParentIfMissing="true"
         android:layout_alignParentTop="true"
-        android:layout_alignParentEnd="true"
         android:layout_alignParentRight="true"
         android:layout_marginStart="0dp"
-        android:layout_marginEnd="6dp"
-        android:layout_toEndOf="@+id/imagePlace"
-        android:layout_toRightOf="@id/imagePlace"
+        android:layout_marginRight="37dp"
+        android:layout_toEndOf="@+id/ivPlace"
+        android:layout_toRightOf="@id/ivPlace"
         android:gravity="center_vertical"
         android:lineSpacingExtra="8sp"
         android:text="Example application"
         android:textSize="16sp" />
 
     <TextView
-        android:id="@+id/addressDistance"
-        android:layout_width="match_parent"
+        android:id="@+id/tvAddress"
+        android:layout_width="338dp"
         android:layout_height="wrap_content"
         android:layout_alignWithParentIfMissing="true"
         android:layout_alignTop="@id/namePlace"
-        android:layout_alignParentEnd="true"
         android:layout_alignParentRight="true"
-        android:layout_marginStart="0dp"
-        android:layout_marginLeft="5dp"
+        android:layout_marginLeft="2dp"
         android:layout_marginTop="26dp"
-        android:layout_marginEnd="6dp"
-        android:layout_marginRight="9dp"
-        android:layout_toEndOf="@+id/imagePlace"
-        android:layout_toRightOf="@id/imagePlace"
+        android:layout_marginRight="41dp"
+        android:layout_toRightOf="@id/ivPlace"
         android:gravity="center_vertical"
         android:lines="3"
         android:scrollHorizontally="false"
         android:textSize="12sp" />
+
+    <ImageButton
+        android:id="@+id/ivSelect"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_toEndOf="@+id/tvAddress" />
+
+    <TextView
+        android:id="@+id/tvDistance"
+        android:layout_width="42dp"
+        android:layout_height="wrap_content"
+        android:text="TextView" />
 
 </RelativeLayout>

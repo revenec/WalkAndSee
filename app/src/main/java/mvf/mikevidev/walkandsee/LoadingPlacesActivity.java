@@ -318,7 +318,8 @@ public class LoadingPlacesActivity extends AppCompatActivity {
                 }
 
                 mapData.put("distance_sort",mapPlaceIdToDistanceCurrentLocation.get(place.getId()));
-                mapData.put("address", place.getAddress() + " \nDistance: " + distanceFormatted + (flDistance < 1000 ? " Mts" : " Kms"));
+                mapData.put("address", place.getAddress());
+                mapData.put("distance", distanceFormatted + (flDistance < 1000 ? " Mts" : " Kms"));
                 Log.i("PLACE_ID_REQUEST_2: ",place.getId());
                 walkAndSeePlace = new WalkAndSeePlace(place.getName(), place.getId(), place.getLatLng(), null, place.getAddress() + " \nDistance: " + (Math.round(mapPlaceIdToDistanceCurrentLocation.get(place.getId())* 100.00) / 100.00) + " Mls",mapPlaceIdToDistanceCurrentLocation.get(place.getId()));
 

@@ -1,61 +1,26 @@
 package mvf.mikevidev.walkandsee;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
-import android.Manifest;
-import android.content.Context;
-import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.location.Location;
-import android.location.LocationListener;
-import android.location.LocationManager;
-import android.os.AsyncTask;
-import android.os.Build;
 import android.os.Bundle;
-import android.os.Trace;
-import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
+import android.widget.ImageButton;
 import android.widget.ImageView;
-import android.widget.ListView;
-import android.widget.SimpleAdapter;
+import android.widget.RadioButton;
 import android.widget.TextView;
 
-import com.google.android.gms.common.api.ApiException;
-import com.google.android.libraries.places.api.Places;
-import com.google.android.libraries.places.api.model.Place;
-import com.google.android.libraries.places.api.net.FetchPhotoRequest;
-import com.google.android.libraries.places.api.net.FetchPlaceRequest;
-import com.google.android.libraries.places.api.net.PlacesClient;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
-import java.util.concurrent.ExecutionException;
 
 public class PlacesActivity extends AppCompatActivity {
 
-    public SimpleAdapter arrAdapter;
-    public ListView lvPlaces;
+    public WalkAndSeePlaceAdapter arrAdapter;
+    public RecyclerView rvPlaces;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,45 +28,76 @@ public class PlacesActivity extends AppCompatActivity {
         setContentView(R.layout.activity_places);
         int radius = getIntent().getIntExtra("intRadius",0);
         setTitle("Places within "  + (radius < 1000 ? radius + " Mts" : (radius/1000) + " Kms"));
-        lvPlaces = findViewById(R.id.rvPlaces);
-        String[] from = {"imagePlace", "namePlace", "address"};
-        int[] to = {R.id.imagePlace, R.id.namePlace, R.id.addressDistance};
-        arrAdapter = new WalkAndSeePlaceAdapter(getApplicationContext(), LoadingPlacesActivity.lstMapLitViewAttributeToData, R.layout.places_view, from, to);
-        lvPlaces.setAdapter(arrAdapter);
+        rvPlaces = findViewById(R.id.rvPlaces);
+        rvPlaces.setLayoutManager(new LinearLayoutManager(this));
+        arrAdapter = new WalkAndSeePlaceAdapter(LoadingPlacesActivity.lstMapLitViewAttributeToData);
+        rvPlaces.setAdapter(arrAdapter);
         arrAdapter.notifyDataSetChanged();
-        lvPlaces.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 
-            }
-        });
 
     }
 
-    //Simple Adapter customised methot to set all the data in the listview
-    public class WalkAndSeePlaceAdapter extends SimpleAdapter {
+    public class WalkAndSeePlaceAdapter extends RecyclerView.Adapter<WalkAndSeePlaceAdapter.MyViewHolder> {
+        private List<Map<String, Object>> mDataset;
 
-        public WalkAndSeePlaceAdapter(Context context, List<? extends Map<String, ?>> data,int resource, String[] from, int[] to) {
-            super(context, data, resource, from, to);
+        // Provide a reference to the views for each data item
+        // Complex data items may need more than one view per item, and
+        // you provide access to all the views for a data item in a view holder
+        public class MyViewHolder extends RecyclerView.ViewHolder {
+            // each data item is just a string in this case
+            public TextView tvNamePlace;
+            public TextView tvAddressPlace;
+            public ImageView ivImagePlace;
+            public TextView tvDistance;
+            public ImageButton ivSelected;
 
-        }
+            public MyViewHolder(View v) {
+                super(v);
 
-        @Override
-        public View getView(int position, View convertView, ViewGroup parent) {
-
-            if (convertView == null) {
-                convertView = getLayoutInflater().inflate(R.layout.places_view,null);
+                this.tvNamePlace = (TextView) v.findViewById(R.id.namePlace);
+                this.tvAddressPlace = (TextView) v.findViewById(R.id.tvAddress);
+                this.ivImagePlace = (ImageView) v.findViewById(R.id.ivPlace);
+                this.tvDistance = (TextView) v.findViewById(R.id.tvDistance);
+                this.ivSelected = (ImageButton) v.findViewById(R.id.ivSelect);
             }
-
-            HashMap<String, Object> data = (HashMap<String, Object>) getItem(position);
-
-            ((TextView) convertView.findViewById(R.id.namePlace)).setText((String) data.get("namePlace"));
-            Bitmap photo = (Bitmap) data.get("imagePlace");
-            ((ImageView) convertView.findViewById(R.id.imagePlace)).setImageBitmap(photo);
-            Log.i("DISTANCE","" + data.get("address"));
-            ((TextView) convertView.findViewById(R.id.addressDistance)).setText((String) data.get("address"));
-            return convertView;
         }
+
+        // Provide a suitable constructor (depends on the kind of dataset)
+        public WalkAndSeePlaceAdapter(List<Map<String, Object>> myDataset) {
+            mDataset = myDataset;
+        }
+
+        // Create new views (invoked by the layout manager)
+        @Override
+        public WalkAndSeePlaceAdapter.MyViewHolder onCreateViewHolder(ViewGroup parent,int viewType)
+        {
+            // create a new view
+            View container = (View) LayoutInflater.from(parent.getContext()).inflate(R.layout.places_view, parent, false);
+
+            MyViewHolder vh = new MyViewHolder(container);
+            return vh;
+        }
+
+        // Replace the contents of a view (invoked by the layout manager)
+        @Override
+        public void onBindViewHolder(WalkAndSeePlaceAdapter.MyViewHolder holder, int position) {
+            // - get element from your dataset at this position
+            // - replace the contents of the view with that element
+
+            holder.tvNamePlace.setText((String) mDataset.get(position).get("namePlace"));
+            holder.tvAddressPlace.setText((String) mDataset.get(position).get("address"));
+            holder.tvDistance.setText((String) mDataset.get(position).get("distance"));
+            holder.ivSelected.setImageResource(R.drawable.lognoletters1_logo);
+            Bitmap photo = (Bitmap) mDataset.get(position).get("imagePlace");
+            holder.ivImagePlace.setImageBitmap(photo);
+        }
+
+        // Return the size of your dataset (invoked by the layout manager)
+        @Override
+        public int getItemCount() {
+            return mDataset.size();
+        }
+
 
     }
 
