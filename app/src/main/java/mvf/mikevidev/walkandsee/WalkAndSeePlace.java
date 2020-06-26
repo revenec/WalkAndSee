@@ -8,7 +8,7 @@ import com.google.android.libraries.places.api.model.PhotoMetadata;
 
 import java.util.Comparator;
 
-public class WalkAndSeePlace
+public class WalkAndSeePlace implements Comparable<WalkAndSeePlace>
 {
     public String placeName;
     public String placeId;
@@ -16,10 +16,12 @@ public class WalkAndSeePlace
     public Bitmap placePhoto;
     public String placeAddress;
     public float flDistanceFromOrigin;
+    public String placeDistance;
+    public boolean isSelected;
 
     public WalkAndSeePlace(){}
 
-    public WalkAndSeePlace(String placeName, String placeId, LatLng placeLocation, Bitmap placePhoto,String placeAddress, float flDistanceFromOrigin)
+    public WalkAndSeePlace(String placeName, String placeId, LatLng placeLocation, Bitmap placePhoto,String placeAddress, float flDistanceFromOrigin, String placeDistance)
     {
         this.placeId = placeId;
         this.placeName = placeName;
@@ -27,6 +29,8 @@ public class WalkAndSeePlace
         this.placePhoto = placePhoto;
         this.placeAddress = placeAddress;
         this.flDistanceFromOrigin = flDistanceFromOrigin;
+        this.placeDistance = placeDistance;
+        this.isSelected = false;
     }
 
     public String getPlaceName() {
@@ -73,9 +77,19 @@ public class WalkAndSeePlace
         return flDistanceFromOrigin;
     }
 
-    public void setFlDistanceFromOrigin(float flDistanceFromOrigin) {
-        this.flDistanceFromOrigin = flDistanceFromOrigin;
+    public void setFlDistanceFromOrigin(float flDistanceFromOrigin) {this.flDistanceFromOrigin = flDistanceFromOrigin;}
+
+    public String getPlaceDistance() {
+        return placeDistance;
     }
+
+    public void setPlaceDistance(String placeDistance) {
+        this.placeDistance = placeDistance;
+    }
+
+    public boolean isSelected() {return isSelected;}
+
+    public void setSelected(boolean selected) {isSelected = selected;}
 
     @Override
     public String toString() {
@@ -89,4 +103,11 @@ public class WalkAndSeePlace
                 '}';
     }
 
+    @Override
+    public int compareTo(WalkAndSeePlace comparePlace) {
+
+        int intcomparePlace = (int) ((WalkAndSeePlace) comparePlace).getFlDistanceFromOrigin();
+
+        return (int) this.getFlDistanceFromOrigin() - intcomparePlace;
+    }
 }

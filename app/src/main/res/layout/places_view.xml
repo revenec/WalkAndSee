@@ -1,64 +1,74 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="fill_parent"
     android:layout_height="wrap_content"
-    android:padding="6dip" >
+    android:backgroundTintMode="src_over"
+    android:padding="6dip">
 
     <ImageView
         android:id="@+id/ivPlace"
         android:layout_width="50dp"
         android:layout_height="50dp"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentTop="true"
-        android:layout_marginStart="9dp"
-        android:layout_marginLeft="6dip"
-        android:layout_marginTop="13dp"
-        android:layout_marginRight="6dip"
-        android:foregroundGravity="center_vertical" />
+        android:background="@color/cardview_light_background"
+        android:backgroundTint="@color/cardview_shadow_end_color"
+        android:backgroundTintMode="src_over"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
         android:id="@+id/namePlace"
-        android:layout_width="309dp"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_alignWithParentIfMissing="true"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentRight="true"
-        android:layout_marginStart="0dp"
-        android:layout_marginRight="37dp"
-        android:layout_toEndOf="@+id/ivPlace"
-        android:layout_toRightOf="@id/ivPlace"
-        android:gravity="center_vertical"
-        android:lineSpacingExtra="8sp"
-        android:text="Example application"
-        android:textSize="16sp" />
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginEnd="8dp"
+        android:text="Name of the place"
+        app:layout_constraintEnd_toStartOf="@+id/tvDistance"
+        app:layout_constraintStart_toEndOf="@+id/ivPlace"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
         android:id="@+id/tvAddress"
-        android:layout_width="338dp"
-        android:layout_height="wrap_content"
-        android:layout_alignWithParentIfMissing="true"
-        android:layout_alignTop="@id/namePlace"
-        android:layout_alignParentRight="true"
-        android:layout_marginLeft="2dp"
-        android:layout_marginTop="26dp"
-        android:layout_marginRight="41dp"
-        android:layout_toRightOf="@id/ivPlace"
-        android:gravity="center_vertical"
-        android:lines="3"
-        android:scrollHorizontally="false"
-        android:textSize="12sp" />
-
-    <ImageButton
-        android:id="@+id/ivSelect"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="12dp"
-        android:layout_toEndOf="@+id/tvAddress" />
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:ellipsize="end"
+        android:singleLine="true"
+        android:text="Adress where the place will be and why we have to find a good place for it"
+        android:textAlignment="textStart"
+        android:textSize="10sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/cbSelect"
+        app:layout_constraintStart_toEndOf="@+id/ivPlace"
+        app:layout_constraintTop_toBottomOf="@+id/namePlace"
+        app:layout_constraintVertical_bias="0.47000003" />
 
     <TextView
         android:id="@+id/tvDistance"
-        android:layout_width="42dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="TextView" />
+        android:layout_marginTop="3dp"
+        android:text="695 Mts"
+        android:textSize="10sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
-</RelativeLayout>
+    <CheckBox
+        android:id="@+id/cbSelect"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/tvDistance"
+        android:layout_gravity="center|end"
+        android:button="@drawable/placeunselectedlogo"
+        android:clickable="true"
+        android:focusable="true"
+        android:scaleX="0.6"
+        android:scaleY="0.6"/>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

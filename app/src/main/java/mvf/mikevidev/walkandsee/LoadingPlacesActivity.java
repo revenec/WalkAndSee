@@ -35,8 +35,11 @@ import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
+import java.net.ProtocolException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -52,18 +55,49 @@ public class LoadingPlacesActivity extends AppCompatActivity {
     public LocationManager locationManager;
     public LocationListener locationListener;
     public Location locationUser;
-    public static List<Map<String, Object>> lstMapLitViewAttributeToData;
     public Map<String, Float> mapPlaceIdToDistanceCurrentLocation;
     public String strSpecificPlace;
     public int intRadiusFromScreen;
     public ArrayList<String> strPlaceTypeFromScreen;
-    public List<WalkAndSeePlace> lstWalkAndSeePlaces;
+    public static List<WalkAndSeePlace> lstWalkAndSeePlaces;
     public static Map<String,WalkAndSeePlace> mapPlaceIdToWalkAndSeePlace;
     public static WalkAndSeePlace walkAndSeePlace;
     public int totalResults;
     public TextView tvMessage;
     public HashMap<String,String> mapPlaceIdToPhotoReferences;
 
+    public class DownloadImages extends AsyncTask<String,Void, Bitmap>
+    {
+
+        @Override
+        protected Bitmap doInBackground(String... urls) {
+            URL url;
+            try
+            {
+                url = new URL(urls[0]);
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setReadTimeout(10000 /* milliseconds */);
+                conn.setConnectTimeout(15000 /* milliseconds */);
+                conn.setRequestMethod("GET");
+                conn.setDoInput(true);
+                conn.connect();
+                int response = conn.getResponseCode();
+                if(response == 200)
+                {
+                    InputStream input = conn.getInputStream();
+
+                    Bitmap myBitmap = BitmapFactory.decodeStream(input);
+
+                    return  myBitmap;
+                }
+            } catch (MalformedURLException | ProtocolException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return null;
+        }
+    }
     public class DownloadData extends AsyncTask<String, Void, String> {
         @Override
         protected String doInBackground(String... urls) {
@@ -114,9 +148,9 @@ public class LoadingPlacesActivity extends AppCompatActivity {
 
             if("ZERO_RESULTS".equals(response))
             {
-                HashMap<String,Object> data = new HashMap<String,Object>();
-                data.put("namePlace","No places found");
-                lstMapLitViewAttributeToData.add(data);
+                WalkAndSeePlace wasRecord = new WalkAndSeePlace();
+                wasRecord.setPlaceName("No places found");
+                lstWalkAndSeePlaces.add(wasRecord);
                 Intent intent = new Intent(getApplicationContext(),PlacesActivity.class);
                 startActivity(intent);
                 finish();
@@ -160,7 +194,6 @@ public class LoadingPlacesActivity extends AppCompatActivity {
         intRadiusFromScreen = getIntent().getIntExtra("intRadius",0);
         strPlaceTypeFromScreen = (ArrayList<String>)getIntent().getSerializableExtra("placesType");
         strSpecificPlace = null;
-        lstMapLitViewAttributeToData = new ArrayList<>();
         lstWalkAndSeePlaces = new ArrayList<>();
         tvMessage = findViewById(R.id.tvMessage);
         locationListener = new LocationListener() {
@@ -238,6 +271,11 @@ public class LoadingPlacesActivity extends AppCompatActivity {
                 if (!Utilities.isBlank(specificPlace)) {
                     url.append("&keyword=").append(specificPlace);
                 }
+                //Only return records if the place is opened now
+                if(getIntent().getBooleanExtra("onlyopen",false) == true)
+                {
+                    url.append("&open_now=true");
+                }
 
                 url.append("&key=" + Utilities.key);
                 Log.i("url: ", url.toString());
@@ -263,7 +301,7 @@ public class LoadingPlacesActivity extends AppCompatActivity {
         Trace.beginSection("SessionGetPlaces");
 
         //Set the information we want to retrieve from google
-        List<Place.Field> placeFields = Arrays.asList(Place.Field.ID, Place.Field.NAME, Place.Field.ADDRESS, Place.Field.LAT_LNG, Place.Field.PHOTO_METADATAS,Place.Field.TYPES);
+        List<Place.Field> placeFields = Arrays.asList(Place.Field.ID, Place.Field.NAME, Place.Field.ADDRESS, Place.Field.LAT_LNG, Place.Field.TYPES);
 
         // Construct a request object, passing the place ID and fields array.
         FetchPlaceRequest request = FetchPlaceRequest.newInstance(placeId, placeFields);
@@ -276,7 +314,6 @@ public class LoadingPlacesActivity extends AppCompatActivity {
         PlacesClient placesClient = Places.createClient(getApplicationContext());
         placesClient.fetchPlace(request).addOnSuccessListener((response) -> {
             Place place = response.getPlace();
-            Map<String, Object> mapData = new HashMap<>();
             Log.i("TAG", "Place found: " + place);
 
             if (place.getLatLng() != null)
@@ -317,40 +354,20 @@ public class LoadingPlacesActivity extends AppCompatActivity {
 
                 }
 
-                mapData.put("distance_sort",mapPlaceIdToDistanceCurrentLocation.get(place.getId()));
-                mapData.put("address", place.getAddress());
-                mapData.put("distance", distanceFormatted + (flDistance < 1000 ? " Mts" : " Kms"));
                 Log.i("PLACE_ID_REQUEST_2: ",place.getId());
-                walkAndSeePlace = new WalkAndSeePlace(place.getName(), place.getId(), place.getLatLng(), null, place.getAddress() + " \nDistance: " + (Math.round(mapPlaceIdToDistanceCurrentLocation.get(place.getId())* 100.00) / 100.00) + " Mls",mapPlaceIdToDistanceCurrentLocation.get(place.getId()));
-
-                if (place.getPhotoMetadatas() != null && place.getPhotoMetadatas().get(0) != null) {
-                    //Generate photo metadata
-                    FetchPhotoRequest photoRequest = FetchPhotoRequest.builder(place.getPhotoMetadatas().get(0))
-                            .setMaxWidth(100) // Optional.
-                            .setMaxHeight(100) // Optional.
-                            .build();
-                    placesClient.fetchPhoto(photoRequest).addOnSuccessListener((fetchPhotoResponse) -> {
-                        Log.i("PHOTO_BITMAP_DOWNLOADED", "Photo: " + fetchPhotoResponse.getBitmap());
-
-                        Bitmap photo = fetchPhotoResponse.getBitmap();
-                        walkAndSeePlace.setPlacePhoto(photo);
-                        mapData.put("imagePlace", photo);
-
-                    }).addOnFailureListener((exception) -> {
-                        if (exception instanceof ApiException) {
-                            ApiException apiException = (ApiException) exception;
-                            int statusCode = apiException.getStatusCode();
-                            // Handle error with given status code.
-                            Log.e("ERROR_PHOTO", "Photo not found: " + statusCode);
-                            //Icons made by <a href="https://www.flaticon.com/authors/eucalyp" title="Eucalyp">Eucalyp</a> from <a href="https://www.flaticon.com/" title="Flaticon"> www.flaticon.com</a>
-                            walkAndSeePlace.setPlacePhoto(BitmapFactory.decodeResource(getResources(), R.drawable.empty_house));
-                            mapData.put("imagePlace", BitmapFactory.decodeResource(getResources(), R.drawable.empty_house));
-                        }
-                    });
-                } else {
-                    //Icons made by <a href="https://www.flaticon.com/authors/eucalyp" title="Eucalyp">Eucalyp</a> from <a href="https://www.flaticon.com/" title="Flaticon"> www.flaticon.com</a>
-                    walkAndSeePlace.setPlacePhoto(BitmapFactory.decodeResource(getResources(), R.drawable.empty_house));
-                    mapData.put("imagePlace", BitmapFactory.decodeResource(getResources(), R.drawable.empty_house));
+                walkAndSeePlace = new WalkAndSeePlace(place.getName(), place.getId(), place.getLatLng(), null, place.getAddress() ,mapPlaceIdToDistanceCurrentLocation.get(place.getId()),distanceFormatted + (flDistance < 1000 ? " Mts" : " Kms"));
+                //Get image from http request
+                if(mapPlaceIdToPhotoReferences.get(place.getId()) != null)
+                {
+                    DownloadImages downloadImages = new DownloadImages();
+                    String url = "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=" + mapPlaceIdToPhotoReferences.get(place.getId()) + "&key=" + Utilities.key;
+                    try {
+                        walkAndSeePlace.setPlacePhoto(downloadImages.execute(url).get());
+                    } catch (ExecutionException e) {
+                        e.printStackTrace();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
 
                 Log.i("INFO_GOOGLE_GET", walkAndSeePlace.toString());
@@ -364,8 +381,7 @@ public class LoadingPlacesActivity extends AppCompatActivity {
                 {
                     strPlaceName = strPlaceName.substring(0,38) + "...";
                 }
-                mapData.put("namePlace",strPlaceName);
-                lstMapLitViewAttributeToData.add(mapData);
+                walkAndSeePlace.setPlaceName(strPlaceName);
 
                 //Create data to be showed in the list view
                 Log.i("Places2: ", walkAndSeePlace.toString());
@@ -386,26 +402,8 @@ public class LoadingPlacesActivity extends AppCompatActivity {
             {
                 Log.i("TAG", "Inside adapter and notify change");
                 //Sort results and return to view
-                List<Map<String,Object>> lstTemp = new ArrayList<>();
-                lstTemp.addAll(lstMapLitViewAttributeToData);
-                lstMapLitViewAttributeToData.clear();
-                List<Float> lstDistance = new ArrayList<>();
-                for(Map<String,Object> record : lstTemp)
-                {
-                    lstDistance.add((Float)record.get("distance_sort"));
-                }
-                Collections.sort(lstDistance);
-                Log.i("TAG", "Inside adapter and notify change: " + lstDistance.toString());
-                for(Float dst : lstDistance)
-                {
-                    for(Map<String,Object> record : lstTemp)
-                    {
-                        if(dst == (Float)record.get("distance_sort"))
-                        {
-                            lstMapLitViewAttributeToData.add(record);
-                        }
-                    }
-                }
+                Collections.sort(lstWalkAndSeePlaces);
+
                 Intent intent = new Intent(getApplicationContext(),PlacesActivity.class);
                 intent.putExtra("intRadius",intRadiusFromScreen);
                 startActivity(intent);
@@ -413,6 +411,7 @@ public class LoadingPlacesActivity extends AppCompatActivity {
             }
 
         });
+
         Trace.endSection();
     }
 

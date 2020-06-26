@@ -50,6 +50,7 @@ public class SearchPlacesActivity extends FragmentActivity implements OnMapReady
     public CheckBox cbShowMuseums;
     public CheckBox cbShowNightClubs;
     public CheckBox cbShowBars;
+    public CheckBox cbOnlyOpen;
 
     public static final String MUSEUM_TYPE = "museum";
     public static final String PARK_TYPE = "park";
@@ -140,11 +141,21 @@ public class SearchPlacesActivity extends FragmentActivity implements OnMapReady
         }
         else
         {
+            boolean isOpen;
             //Open Places Activity passing per parameter the radius and the options selected if "Show All is not selected"
             Intent intent = new Intent(getApplicationContext(),LoadingPlacesActivity.class);
             Log.i("PROGRESS","Progress: " + sbRadious.getProgress());
             intent.putExtra("intRadius",sbRadious.getProgress());
             intent.putExtra("placesType",params);
+            if(cbOnlyOpen.isChecked())
+            {
+                isOpen = true;
+            }
+            else
+            {
+                isOpen = false;
+            }
+            intent.putExtra("onlyopen",isOpen);
             startActivity(intent);
         }
 
@@ -160,6 +171,7 @@ public class SearchPlacesActivity extends FragmentActivity implements OnMapReady
         cbShowMuseums = findViewById(R.id.museumsOpt);
         cbShowNightClubs = findViewById(R.id.nightClubsOpt);
         cbShowBars = findViewById(R.id.barsOpt);
+        cbOnlyOpen = findViewById(R.id.cbOnlyOpen);
         screenAdjustments();
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
@@ -206,6 +218,7 @@ public class SearchPlacesActivity extends FragmentActivity implements OnMapReady
                 cbShowMuseums.setTextSize(12);
                 cbShowNightClubs.setTextSize(12);
                 cbShowBars.setTextSize(12);
+                cbOnlyOpen.setTextSize(12);
                 break;
             default:
         }
