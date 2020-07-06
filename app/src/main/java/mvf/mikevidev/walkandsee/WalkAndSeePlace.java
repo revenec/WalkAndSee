@@ -18,6 +18,7 @@ public class WalkAndSeePlace implements Comparable<WalkAndSeePlace>
     public float flDistanceFromOrigin;
     public String placeDistance;
     public boolean isSelected;
+    public int intPositionInRoute;
 
     public WalkAndSeePlace(){}
 
@@ -31,6 +32,7 @@ public class WalkAndSeePlace implements Comparable<WalkAndSeePlace>
         this.flDistanceFromOrigin = flDistanceFromOrigin;
         this.placeDistance = placeDistance;
         this.isSelected = false;
+        this.intPositionInRoute = 0;
     }
 
     public String getPlaceName() {
@@ -91,6 +93,10 @@ public class WalkAndSeePlace implements Comparable<WalkAndSeePlace>
 
     public void setSelected(boolean selected) {isSelected = selected;}
 
+    public int getIntPositionInRoute() {return intPositionInRoute;}
+
+    public void setIntPositionInRoute(int intPositionInRoute) { this.intPositionInRoute = intPositionInRoute;}
+
     @Override
     public String toString() {
         return "Place{" +
@@ -106,8 +112,8 @@ public class WalkAndSeePlace implements Comparable<WalkAndSeePlace>
     @Override
     public int compareTo(WalkAndSeePlace comparePlace) {
 
-        int intcomparePlace = (int) ((WalkAndSeePlace) comparePlace).getFlDistanceFromOrigin();
+        int intComparePlace = (int) ((WalkAndSeePlace) comparePlace).getFlDistanceFromOrigin();
 
-        return (int) this.getFlDistanceFromOrigin() - intcomparePlace;
+        return (int) this.getFlDistanceFromOrigin() - intComparePlace;
     }
 }

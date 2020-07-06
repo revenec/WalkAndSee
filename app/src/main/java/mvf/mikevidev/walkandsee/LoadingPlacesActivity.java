@@ -23,6 +23,7 @@ import android.util.Log;
 import android.widget.TextView;
 
 import com.google.android.gms.common.api.ApiException;
+import com.google.android.gms.maps.model.LatLng;
 import com.google.android.libraries.places.api.Places;
 import com.google.android.libraries.places.api.model.Place;
 import com.google.android.libraries.places.api.net.FetchPhotoRequest;
@@ -61,7 +62,7 @@ public class LoadingPlacesActivity extends AppCompatActivity {
     public ArrayList<String> strPlaceTypeFromScreen;
     public static List<WalkAndSeePlace> lstWalkAndSeePlaces;
     public static Map<String,WalkAndSeePlace> mapPlaceIdToWalkAndSeePlace;
-    public static WalkAndSeePlace walkAndSeePlace;
+    public static WalkAndSeePlace myPlaceToStartRoute;
     public int totalResults;
     public TextView tvMessage;
     public HashMap<String,String> mapPlaceIdToPhotoReferences;
@@ -235,6 +236,8 @@ public class LoadingPlacesActivity extends AppCompatActivity {
             }
             if (locationUser != null)
             {
+                LatLng myLatLng = new LatLng(locationUser.getLatitude(),locationUser.getLongitude());
+                myPlaceToStartRoute = new WalkAndSeePlace("", null, myLatLng, null, "" ,0.00f,"0 Mts");
                 new Thread()
                 {
                     @Override
@@ -314,6 +317,7 @@ public class LoadingPlacesActivity extends AppCompatActivity {
         PlacesClient placesClient = Places.createClient(getApplicationContext());
         placesClient.fetchPlace(request).addOnSuccessListener((response) -> {
             Place place = response.getPlace();
+            WalkAndSeePlace walkAndSeePlace;
             Log.i("TAG", "Place found: " + place);
 
             if (place.getLatLng() != null)
