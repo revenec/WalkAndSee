@@ -5,8 +5,11 @@ import android.location.Location;
 
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.libraries.places.api.model.PhotoMetadata;
+import com.google.firebase.database.Exclude;
 
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map;
 
 public class WalkAndSeePlace implements Comparable<WalkAndSeePlace>
 {
@@ -115,5 +118,21 @@ public class WalkAndSeePlace implements Comparable<WalkAndSeePlace>
         int intComparePlace = (int) ((WalkAndSeePlace) comparePlace).getFlDistanceFromOrigin();
 
         return (int) this.getFlDistanceFromOrigin() - intComparePlace;
+    }
+
+    @Exclude
+    public Map<String,Object> toMapInstance()
+    {
+        HashMap<String,Object> mapToReturn = new HashMap<>();
+        mapToReturn.put("placeName",this.placeName);
+        mapToReturn.put("placeId",this.placeId);
+        mapToReturn.put("placeLocation",this.placeLocation);
+        //mapToReturn.put("placePhoto",this.placePhoto);
+        mapToReturn.put("placeAddress",this.placeAddress);
+        mapToReturn.put("flDistanceFromOrigin",this.flDistanceFromOrigin);
+        mapToReturn.put("placeDistance",this.placeDistance);
+        mapToReturn.put("isSelected",this.isSelected);
+        mapToReturn.put("intPositionInRoute",this.intPositionInRoute);
+        return mapToReturn;
     }
 }

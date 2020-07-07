@@ -17,24 +17,38 @@ import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Parcelable;
 import android.os.Trace;
 import android.util.Log;
 import android.widget.TextView;
 
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
 import com.google.android.libraries.places.api.Places;
 import com.google.android.libraries.places.api.model.Place;
-import com.google.android.libraries.places.api.net.FetchPhotoRequest;
 import com.google.android.libraries.places.api.net.FetchPlaceRequest;
 import com.google.android.libraries.places.api.net.PlacesClient;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.firestore.CollectionReference;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.QuerySnapshot;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
+import com.google.firebase.storage.UploadTask;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -66,6 +80,14 @@ public class LoadingPlacesActivity extends AppCompatActivity {
     public int totalResults;
     public TextView tvMessage;
     public HashMap<String,String> mapPlaceIdToPhotoReferences;
+
+    //Manage database system
+    public FirebaseDatabase firebaseDatabase;
+    public FirebaseStorage firebaseStorage;
+    public FirebaseFirestore firestore;
+    public DatabaseReference dbPlaces;
+    public StorageReference stImagePlaces;
+    public FirebaseAuth firebaseAuth;
 
     public class DownloadImages extends AsyncTask<String,Void, Bitmap>
     {
@@ -158,15 +180,37 @@ public class LoadingPlacesActivity extends AppCompatActivity {
             }
             else
             {
-                for (String placeId : getPlaceIds(result)) {
+                //Set<String> lstPlaceIdsToProcess = (Set<String>) getPlaceIds(result);
+
+                for (String placeId : getPlaceIdsToQueryGooglePlaces(getPlaceIds(result))) {
                     Log.i("PLACE_ID_REQUEST: ",placeId);
-                    getPlace(placeId);
+                    //getPlace(placeId);
                 }
             }
 
             Log.i("Places: ", result);
         }
 
+    }
+    //Method to load places already exiting in the database in order to reduce to requests to google places
+    private ArrayList<String> getPlaceIdsToQueryGooglePlaces(ArrayList<String> placeIds)
+    {
+        ArrayList<String> placeIdsForGooglePlaces;
+        WalkAndSeePlace walkAndSeePlace;
+
+        placeIdsForGooglePlaces = new ArrayList<>();
+        CollectionReference placesInFireStore = firestore.collection("Places");
+        placesInFireStore.whereIn("placeId",placeIds).get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+            @Override
+            public void onComplete(@NonNull Task<QuerySnapshot> task)
+            {
+                for (QueryDocumentSnapshot document : task.getResult()) {
+                    Log.d("Data from FireStore", document.getId() + " => " + document.getData());
+                }
+            }
+        });
+
+        return new ArrayList<>();
     }
 
     @Override
@@ -197,6 +241,16 @@ public class LoadingPlacesActivity extends AppCompatActivity {
         strSpecificPlace = null;
         lstWalkAndSeePlaces = new ArrayList<>();
         tvMessage = findViewById(R.id.tvMessage);
+
+        //Get database and keep the dat offline
+        firebaseDatabase = FirebaseDatabase.getInstance();
+        firebaseStorage = FirebaseStorage.getInstance();
+        firestore = FirebaseFirestore.getInstance();
+        firebaseAuth = FirebaseAuth.getInstance();
+        FirebaseDatabase.getInstance().setPersistenceEnabled(true);
+        dbPlaces = firebaseDatabase.getReference("Places");
+        stImagePlaces = firebaseStorage.getReference("Images");
+
         locationListener = new LocationListener() {
             @Override
             public void onLocationChanged(Location location) {}
@@ -367,6 +421,34 @@ public class LoadingPlacesActivity extends AppCompatActivity {
                     String url = "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=" + mapPlaceIdToPhotoReferences.get(place.getId()) + "&key=" + Utilities.key;
                     try {
                         walkAndSeePlace.setPlacePhoto(downloadImages.execute(url).get());
+                        // Create a reference to "placeId.jpg"
+                        StorageReference placeRef = stImagePlaces.child(place.getId() + ".jpg");
+
+                        // Create a reference to 'Images/placeId.jpg'
+                        StorageReference placeImagesRef = stImagePlaces.child("Images/" + place.getId() + ".jpg");
+
+                        // While the file names are the same, the references point to different files
+                        placeRef.getName().equals(placeImagesRef.getName());    // true
+                        placeRef.getPath().equals(placeImagesRef.getPath());    // false
+
+                        //Store image in database
+                        ByteArrayOutputStream placeImageBytes = new ByteArrayOutputStream();
+                        walkAndSeePlace.getPlacePhoto().compress(Bitmap.CompressFormat.JPEG, 100, placeImageBytes);
+                        byte[] data = placeImageBytes.toByteArray();
+
+                        UploadTask uploadTask = placeRef.putBytes(data);
+                        uploadTask.addOnFailureListener(new OnFailureListener() {
+                            @Override
+                            public void onFailure(@NonNull Exception exception) {
+                                // Handle unsuccessful uploads
+                            }
+                        }).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                            @Override
+                            public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                                // taskSnapshot.getMetadata() contains file metadata such as size, content-type, etc.
+                                // ...
+                            }
+                        });
                     } catch (ExecutionException e) {
                         e.printStackTrace();
                     } catch (InterruptedException e) {
@@ -386,6 +468,9 @@ public class LoadingPlacesActivity extends AppCompatActivity {
                     strPlaceName = strPlaceName.substring(0,38) + "...";
                 }
                 walkAndSeePlace.setPlaceName(strPlaceName);
+                //Add record to the database in Firebase
+
+                dbPlaces.push().setValue(walkAndSeePlace.toMapInstance());
 
                 //Create data to be showed in the list view
                 Log.i("Places2: ", walkAndSeePlace.toString());
