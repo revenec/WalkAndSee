@@ -6,6 +6,7 @@ import android.widget.Toast;
 public class Utilities
 {
     public static String key = "";
+    public static final String basicColorApp = "#3f48cc";
     public static boolean isBlank(String text)
     {
         if(text == null)
