@@ -1,4 +1,4 @@
-package mvf.mikevidev.walkandsee;
+package mvf.mikevidev.walkandsee.repositories;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -17,6 +17,7 @@ import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Trace;
 import android.util.Log;
 import android.widget.TextView;
@@ -32,13 +33,17 @@ import com.google.android.libraries.places.api.model.Place;
 import com.google.android.libraries.places.api.net.FetchPlaceRequest;
 import com.google.android.libraries.places.api.net.PlacesClient;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.firestore.CollectionReference;
+import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.FirebaseFirestoreSettings;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
+import com.google.firebase.storage.FileDownloadTask;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
@@ -49,9 +54,11 @@ import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.reflect.Array;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.ProtocolException;
@@ -64,6 +71,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
+
+import mvf.mikevidev.walkandsee.R;
+import mvf.mikevidev.walkandsee.Utilities.Utilities;
+import mvf.mikevidev.walkandsee.models.WalkAndSeePlace;
+import mvf.mikevidev.walkandsee.viewmodels.PlacesActivity;
 
 public class LoadingPlacesActivity extends AppCompatActivity {
 
@@ -160,6 +172,7 @@ public class LoadingPlacesActivity extends AppCompatActivity {
             super.onPostExecute(result);
             //after execution fill up the list view with the locations
             String response;
+
             try {
                 JSONObject JSONResult = new JSONObject(result);
                 response = JSONResult.getString("status");
@@ -171,48 +184,132 @@ public class LoadingPlacesActivity extends AppCompatActivity {
 
             if("ZERO_RESULTS".equals(response))
             {
-                WalkAndSeePlace wasRecord = new WalkAndSeePlace();
-                wasRecord.setPlaceName("No places found");
-                lstWalkAndSeePlaces.add(wasRecord);
-                Intent intent = new Intent(getApplicationContext(),PlacesActivity.class);
-                startActivity(intent);
-                finish();
+                goToPlacesActivityWithNoResults();
             }
             else
             {
                 //Set<String> lstPlaceIdsToProcess = (Set<String>) getPlaceIds(result);
-
-                for (String placeId : getPlaceIdsToQueryGooglePlaces(getPlaceIds(result))) {
-                    Log.i("PLACE_ID_REQUEST: ",placeId);
-                    //getPlace(placeId);
-                }
+                ArrayList<String> placeIdsFromUrl = getPlaceIds(result);
+                getPlaceIdsToQueryGooglePlaces(placeIdsFromUrl);
             }
 
             Log.i("Places: ", result);
         }
 
     }
-    //Method to load places already exiting in the database in order to reduce to requests to google places
-    private ArrayList<String> getPlaceIdsToQueryGooglePlaces(ArrayList<String> placeIds)
+    //Method to move to the next activity not showing results
+    private void goToPlacesActivityWithNoResults()
     {
-        ArrayList<String> placeIdsForGooglePlaces;
-        WalkAndSeePlace walkAndSeePlace;
-
-        placeIdsForGooglePlaces = new ArrayList<>();
-        CollectionReference placesInFireStore = firestore.collection("Places");
-        placesInFireStore.whereIn("placeId",placeIds).get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
-            @Override
-            public void onComplete(@NonNull Task<QuerySnapshot> task)
-            {
-                for (QueryDocumentSnapshot document : task.getResult()) {
-                    Log.d("Data from FireStore", document.getId() + " => " + document.getData());
-                }
-            }
-        });
-
-        return new ArrayList<>();
+        WalkAndSeePlace wasRecord = new WalkAndSeePlace();
+        wasRecord.setPlaceName("No places found");
+        lstWalkAndSeePlaces.add(wasRecord);
+        Intent intent = new Intent(getApplicationContext(), PlacesActivity.class);
+        startActivity(intent);
+        finish();
     }
 
+    //Method to load places already exiting in the database in order to reduce to requests to google places
+    private void getPlaceIdsToQueryGooglePlaces(ArrayList<String> lstPlaceIds)
+    {
+
+        Log.e("CURRENT_USER", FirebaseAuth.getInstance().getCurrentUser().getEmail());
+        //Get directory
+        File storagePath = new File(Environment.getExternalStorageDirectory(), "WalkAndSeeImages");
+        // Create directory if not exists
+        if(!storagePath.exists()) {
+            storagePath.mkdirs();
+        }
+        firestore.collection("Places").whereIn("placeId",lstPlaceIds).orderBy("flDistanceFromOrigin").get()
+                .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                    ArrayList<String> lstPlaceIdsToReturn = (ArrayList<String>) lstPlaceIds.clone();
+                    @Override
+                    public void onComplete(@NonNull Task<QuerySnapshot> task)
+                    {
+                        if(task.isSuccessful())
+                        {
+                            for (QueryDocumentSnapshot document : task.getResult())
+                            {
+                                Log.i("getPlaceIdsToQueryGooglePlaces -> Data from FireStore", document.getId() + " => " + document.getData());
+                                WalkAndSeePlace wasp = document.toObject(WalkAndSeePlace.class);
+
+                                //Get images and save the file in the local device to reduce the quantity of data in memory
+                                try {
+
+                                    File photo = new File(storagePath,wasp.getPlaceId() + ".jpg");
+                                    if(photo.exists())
+                                    {
+                                        wasp.setPlacePhoto(BitmapFactory.decodeFile(photo.getPath()));
+                                    }
+                                    else
+                                    {
+                                        File localFile = File.createTempFile("WalkAndSeeImages","jpg");
+                                        stImagePlaces.child(wasp.getPlaceId() + ".jpg").getFile(localFile).addOnSuccessListener(new OnSuccessListener<FileDownloadTask.TaskSnapshot>() {
+                                            @Override
+                                            public void onSuccess(FileDownloadTask.TaskSnapshot taskSnapshot)
+                                            {
+                                                wasp.setPlacePhoto(BitmapFactory.decodeFile(localFile.getPath()));
+                                            }
+
+                                        })
+                                        .addOnFailureListener(new OnFailureListener() {
+                                            @Override
+                                            public void onFailure(@NonNull Exception e) {
+                                                wasp.setPlacePhoto(BitmapFactory.decodeResource(getResources(), R.drawable.empty_house));
+                                            }
+                                        });
+                                    }
+
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                    Log.e("getPlaceIdsToQueryGooglePlaces -> ERROR", e.getMessage());
+                                    wasp.setPlacePhoto(BitmapFactory.decodeResource(getResources(), R.drawable.empty_house));
+                                }
+
+                                lstWalkAndSeePlaces.add(wasp);
+                                lstPlaceIdsToReturn.remove(wasp.getPlaceId());
+                            }
+                            processPlaceIds(lstPlaceIdsToReturn);
+                        }
+                        else
+                        {
+                            Log.e("Data from FireStore(FAILURE)", task.getException().toString());
+                            goToPlacesActivityWithNoResults();
+                        }
+
+                    }
+
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e)
+                    {
+                        //Close this page and will return to the previous one
+                        Log.e("RETREIVE_DATA(FAILURE)", e.getMessage());
+                        finish();
+                    }
+                });
+
+        Log.i("getPlaceIdsToQueryGooglePlaces: ","Places from origin: " + lstPlaceIds.toString());
+
+    }
+    //Method created to query the places not existing in Firebase by uso
+    public void processPlaceIds(ArrayList<String> lstPlaceIdsToQuery)
+    {
+
+        if(!lstPlaceIdsToQuery.isEmpty())
+        {
+            for (String placeId : lstPlaceIdsToQuery)
+            {
+                Log.i("PLACE_ID_REQUEST: ",placeId);
+                getPlace(placeId);
+            }
+        }
+        else
+        {
+            Log.i("DownloadData: ","There is not places to retrieve from Google Place");
+            moveToPlacesList();
+        }
+    }
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -246,9 +343,26 @@ public class LoadingPlacesActivity extends AppCompatActivity {
         firebaseDatabase = FirebaseDatabase.getInstance();
         firebaseStorage = FirebaseStorage.getInstance();
         firestore = FirebaseFirestore.getInstance();
+        FirebaseFirestoreSettings settings = new FirebaseFirestoreSettings.Builder()
+                                            .setPersistenceEnabled(true)
+                                            .setCacheSizeBytes(FirebaseFirestoreSettings.CACHE_SIZE_UNLIMITED)
+                                            .build();
+        firestore.setFirestoreSettings(settings);
         firebaseAuth = FirebaseAuth.getInstance();
-        FirebaseDatabase.getInstance().setPersistenceEnabled(true);
         dbPlaces = firebaseDatabase.getReference("Places");
+        dbPlaces.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot)
+            {
+                Log.i("DATA_CHANGE","Inside data change listener");
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error)
+            {
+                Log.i("DATA_CANCELLED","Inside data cancelled");
+            }
+        });
         stImagePlaces = firebaseStorage.getReference("Images");
 
         locationListener = new LocationListener() {
@@ -291,7 +405,7 @@ public class LoadingPlacesActivity extends AppCompatActivity {
             if (locationUser != null)
             {
                 LatLng myLatLng = new LatLng(locationUser.getLatitude(),locationUser.getLongitude());
-                myPlaceToStartRoute = new WalkAndSeePlace("", null, myLatLng, null, "" ,0.00f,"0 Mts");
+                myPlaceToStartRoute = new WalkAndSeePlace("", null, myLatLng.latitude,myLatLng.longitude, null, "" ,0.00f,"0 Mts");
                 new Thread()
                 {
                     @Override
@@ -413,7 +527,7 @@ public class LoadingPlacesActivity extends AppCompatActivity {
                 }
 
                 Log.i("PLACE_ID_REQUEST_2: ",place.getId());
-                walkAndSeePlace = new WalkAndSeePlace(place.getName(), place.getId(), place.getLatLng(), null, place.getAddress() ,mapPlaceIdToDistanceCurrentLocation.get(place.getId()),distanceFormatted + (flDistance < 1000 ? " Mts" : " Kms"));
+                walkAndSeePlace = new WalkAndSeePlace(place.getName(), place.getId(), place.getLatLng().latitude,place.getLatLng().longitude, null, place.getAddress() ,mapPlaceIdToDistanceCurrentLocation.get(place.getId()),distanceFormatted + (flDistance < 1000 ? " Mts" : " Kms"));
                 //Get image from http request
                 if(mapPlaceIdToPhotoReferences.get(place.getId()) != null)
                 {
@@ -470,7 +584,17 @@ public class LoadingPlacesActivity extends AppCompatActivity {
                 walkAndSeePlace.setPlaceName(strPlaceName);
                 //Add record to the database in Firebase
 
-                dbPlaces.push().setValue(walkAndSeePlace.toMapInstance());
+                firestore.collection("Places").add(walkAndSeePlace.toMapInstance()).addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
+                    @Override
+                    public void onSuccess(DocumentReference documentReference) {
+                        Log.i("ADDED_SUCCESS:","Added successfully");
+                    }
+                }).addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Log.i("ADDED_FAILED:","Added failed: " + e.getMessage());
+                    }
+                });
 
                 //Create data to be showed in the list view
                 Log.i("Places2: ", walkAndSeePlace.toString());
@@ -490,18 +614,23 @@ public class LoadingPlacesActivity extends AppCompatActivity {
             if(this.totalResults == lstWalkAndSeePlaces.size())
             {
                 Log.i("TAG", "Inside adapter and notify change");
-                //Sort results and return to view
-                Collections.sort(lstWalkAndSeePlaces);
-
-                Intent intent = new Intent(getApplicationContext(),PlacesActivity.class);
-                intent.putExtra("intRadius",intRadiusFromScreen);
-                startActivity(intent);
-                finish();
+                moveToPlacesList();
             }
 
         });
 
         Trace.endSection();
+    }
+    //Method to move to places list, this can be called from PostExecute method in DownloadData(if there is no place to retrieve in google maps)or onComplete method in getPlace
+    private void moveToPlacesList()
+    {
+        //Sort results and return to view
+        Collections.sort(lstWalkAndSeePlaces);
+
+        Intent intent = new Intent(getApplicationContext(),PlacesActivity.class);
+        intent.putExtra("intRadius",intRadiusFromScreen);
+        startActivity(intent);
+        finish();
     }
 
     //Get place id and distance from current location, so we can sort places by proximity

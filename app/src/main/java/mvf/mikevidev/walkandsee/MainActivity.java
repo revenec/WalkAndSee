@@ -14,10 +14,16 @@ import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.FirebaseDatabase;
+
+import mvf.mikevidev.walkandsee.Utilities.Utilities;
+import mvf.mikevidev.walkandsee.viewmodels.SearchPlacesActivity;
 
 public class MainActivity extends AppCompatActivity {
 
     public FirebaseAuth firebaseAuth;
+    public static String strUserEmail;
+    public static String strUserPass;
 
     public void doLogin(View view)
     {
@@ -42,8 +48,12 @@ public class MainActivity extends AppCompatActivity {
                             if (task.isSuccessful()) {
                                 // Sign in success, update UI with the signed-in user's information
                                 Log.d("TAG", "createUserWithEmail:success");
-                                FirebaseUser user = firebaseAuth.getCurrentUser();
-                                Log.e("TAG_LOGIN", user.getDisplayName());
+                                FirebaseDatabase.getInstance().getReference().child("users").child(task.getResult().getUser().getUid())
+                                                                    .child("email").setValue(strUser);
+                                FirebaseDatabase.getInstance().getReference().child("users").child(task.getResult().getUser().getUid())
+                                                                    .child("password").setValue(strPass);
+                                strUserEmail = strUser;
+                                strUserPass = strPass;
                                 goToStartMenu();
                             } else {
                                 // If sign in fails, display a message to the user.
@@ -65,7 +75,9 @@ public class MainActivity extends AppCompatActivity {
                                     // Sign in success, update UI with the signed-in user's information
                                     Log.d("TAG", "signInWithEmail:success");
                                     FirebaseUser user = firebaseAuth.getCurrentUser();
-                                    Log.e("TAG_SIGNIN", user.getDisplayName());
+                                    Log.e("TAG_SIGNIN", "User logged: " + user.getDisplayName());
+                                    strUserEmail = strUser;
+                                    strUserPass = strPass;
                                     goToStartMenu();
                                 } else {
                                     // If sign in fails, display a message to the user.
@@ -97,7 +109,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void goToStartMenu()
     {
-        Intent intent = new Intent(getApplicationContext(),SearchPlacesActivity.class);
+        Intent intent = new Intent(getApplicationContext(), SearchPlacesActivity.class);
         startActivity(intent);
     }
 }

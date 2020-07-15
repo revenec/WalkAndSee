@@ -1,4 +1,4 @@
-package mvf.mikevidev.walkandsee;
+package mvf.mikevidev.walkandsee.viewmodels;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
@@ -26,16 +26,16 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
-import com.google.android.gms.maps.model.Circle;
 import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.gms.maps.model.Polygon;
-import com.google.android.gms.maps.model.Polyline;
 
 import java.util.ArrayList;
+
+import mvf.mikevidev.walkandsee.repositories.LoadingPlacesActivity;
+import mvf.mikevidev.walkandsee.R;
+import mvf.mikevidev.walkandsee.Utilities.Utilities;
 
 public class SearchPlacesActivity extends FragmentActivity implements OnMapReadyCallback {
 
@@ -143,7 +143,7 @@ public class SearchPlacesActivity extends FragmentActivity implements OnMapReady
         {
             boolean isOpen;
             //Open Places Activity passing per parameter the radius and the options selected if "Show All is not selected"
-            Intent intent = new Intent(getApplicationContext(),LoadingPlacesActivity.class);
+            Intent intent = new Intent(getApplicationContext(), LoadingPlacesActivity.class);
             Log.i("PROGRESS","Progress: " + sbRadious.getProgress());
             intent.putExtra("intRadius",sbRadious.getProgress());
             intent.putExtra("placesType",params);
@@ -297,20 +297,6 @@ public class SearchPlacesActivity extends FragmentActivity implements OnMapReady
         else
         {
             //The zoom will be between 20 (max zoom allowed in Google maps) and the minimun which adjust to the screen
-            /*float flZoomThreshold = MAX_ZOOM - MIN_ZOOM;
-            float percentatgeProgress = (barProgress * 100) / (MAX_RADIUS - MIN_RADIUS);
-            float substract = flZoomThreshold * (percentatgeProgress / 100);
-            //Calculate the percentage to discount to the max zoom based on the percentage we increase the radius and considering the threshold
-            float flzoom = MAX_ZOOM - (substract * substract);
-
-            if(flzoom < MIN_ZOOM || barProgress == MAX_RADIUS)
-            {
-                flzoom = MIN_ZOOM;
-            }
-            if(flzoom > MAX_ZOOM || barProgress == MIN_RADIUS)
-            {
-                flzoom = MAX_ZOOM;
-            }*/
 
             float flzoom = 0f;
             if(barProgress == MIN_RADIUS)

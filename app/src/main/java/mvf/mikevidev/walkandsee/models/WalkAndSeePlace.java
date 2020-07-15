@@ -1,13 +1,10 @@
-package mvf.mikevidev.walkandsee;
+package mvf.mikevidev.walkandsee.models;
 
 import android.graphics.Bitmap;
-import android.location.Location;
 
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.libraries.places.api.model.PhotoMetadata;
 import com.google.firebase.database.Exclude;
 
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -22,14 +19,17 @@ public class WalkAndSeePlace implements Comparable<WalkAndSeePlace>
     public String placeDistance;
     public boolean isSelected;
     public int intPositionInRoute;
+    public Double placeLat;
+    public Double placeLon;
 
     public WalkAndSeePlace(){}
 
-    public WalkAndSeePlace(String placeName, String placeId, LatLng placeLocation, Bitmap placePhoto,String placeAddress, float flDistanceFromOrigin, String placeDistance)
+    public WalkAndSeePlace(String placeName, String placeId, Double placeLat, Double placeLon, Bitmap placePhoto,String placeAddress, float flDistanceFromOrigin, String placeDistance)
     {
         this.placeId = placeId;
         this.placeName = placeName;
-        this.placeLocation = placeLocation;
+        this.placeLat = placeLat;
+        this.placeLon = placeLon;
         this.placePhoto = placePhoto;
         this.placeAddress = placeAddress;
         this.flDistanceFromOrigin = flDistanceFromOrigin;
@@ -55,11 +55,11 @@ public class WalkAndSeePlace implements Comparable<WalkAndSeePlace>
     }
 
     public LatLng getPlaceLocation() {
-        return placeLocation;
+        return new LatLng(this.placeLat,this.placeLon);
     }
 
     public void setPlaceLocation(LatLng placeLocation) {
-        this.placeLocation = placeLocation;
+        this.placeLocation = new LatLng(this.placeLat,this.placeLon);
     }
 
     public Bitmap getPlacePhoto() {
@@ -99,7 +99,21 @@ public class WalkAndSeePlace implements Comparable<WalkAndSeePlace>
     public int getIntPositionInRoute() {return intPositionInRoute;}
 
     public void setIntPositionInRoute(int intPositionInRoute) { this.intPositionInRoute = intPositionInRoute;}
+    public Double getPlaceLat() {
+        return placeLat;
+    }
 
+    public void setPlaceLat(Double placeLat) {
+        this.placeLat = placeLat;
+    }
+
+    public Double getPlaceLon() {
+        return placeLon;
+    }
+
+    public void setPlaceLon(Double placeLon) {
+        this.placeLon = placeLon;
+    }
     @Override
     public String toString() {
         return "Place{" +
@@ -126,8 +140,8 @@ public class WalkAndSeePlace implements Comparable<WalkAndSeePlace>
         HashMap<String,Object> mapToReturn = new HashMap<>();
         mapToReturn.put("placeName",this.placeName);
         mapToReturn.put("placeId",this.placeId);
-        mapToReturn.put("placeLocation",this.placeLocation);
-        //mapToReturn.put("placePhoto",this.placePhoto);
+        mapToReturn.put("placeLat",this.placeLat);
+        mapToReturn.put("placeLon",this.placeLon);
         mapToReturn.put("placeAddress",this.placeAddress);
         mapToReturn.put("flDistanceFromOrigin",this.flDistanceFromOrigin);
         mapToReturn.put("placeDistance",this.placeDistance);

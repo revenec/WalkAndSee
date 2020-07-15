@@ -1,4 +1,4 @@
-package mvf.mikevidev.walkandsee;
+package mvf.mikevidev.walkandsee.Utilities;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -6,6 +6,9 @@ import android.os.Bundle;
 import android.widget.TextView;
 
 import java.util.ArrayList;
+
+import mvf.mikevidev.walkandsee.R;
+import mvf.mikevidev.walkandsee.models.WalkAndSeePlace;
 
 public class CreateRouteActivity extends AppCompatActivity {
 

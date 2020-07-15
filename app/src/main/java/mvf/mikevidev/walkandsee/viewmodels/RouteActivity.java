@@ -1,4 +1,4 @@
-package mvf.mikevidev.walkandsee;
+package mvf.mikevidev.walkandsee.viewmodels;
 
 import androidx.fragment.app.FragmentActivity;
 
@@ -8,8 +8,13 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+
+import mvf.mikevidev.walkandsee.R;
+import mvf.mikevidev.walkandsee.models.WalkAndSeePlace;
+import mvf.mikevidev.walkandsee.repositories.LoadingPlacesActivity;
 
 public class RouteActivity extends FragmentActivity implements OnMapReadyCallback {
 
@@ -39,8 +44,13 @@ public class RouteActivity extends FragmentActivity implements OnMapReadyCallbac
         mMap = googleMap;
 
         // Add a marker in Sydney and move the camera
-        LatLng sydney = new LatLng(-34, 151);
-        mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
+        LatLng startLocation = new LatLng(LoadingPlacesActivity.myPlaceToStartRoute.getPlaceLat(), LoadingPlacesActivity.myPlaceToStartRoute.getPlaceLon());
+        mMap.addMarker(new MarkerOptions().position(startLocation).title("You are here"));
+        mMap.moveCamera(CameraUpdateFactory.newLatLng(startLocation));
+
+        for(WalkAndSeePlace wasp : PlacesActivity.lstPlacesSelected)
+        {
+            mMap.addMarker(new MarkerOptions().position(startLocation).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)).title(wasp.getPlaceName()));
+        }
     }
 }

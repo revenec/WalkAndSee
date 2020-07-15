@@ -5,7 +5,7 @@
     android:id="@+id/loadingBar"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".LoadingPlacesActivity">
+    tools:context=".repositories.LoadingPlacesActivity">
 
     <ProgressBar
         android:id="@+id/progressBar"
