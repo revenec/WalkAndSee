@@ -6,7 +6,7 @@ import android.widget.Toast;
 
 public class Utilities
 {
-    public static String key = "AIzaSyBdqGweqcB97eit2khrIBE6yagMjSb8dIg";
+    public static String key = "ADD_YOUR_API_KEY";
     public static final String basicColorApp = "#3f48cc";
     public static boolean isBlank(String text)
     {
