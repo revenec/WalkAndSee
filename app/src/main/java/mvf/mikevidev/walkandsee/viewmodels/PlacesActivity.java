@@ -75,18 +75,26 @@ public class PlacesActivity extends AppCompatActivity {
     //Method to move to activities
     public void moveToActivity(boolean blnMoveToCreateRoute) {
         Intent intent;
-        if (blnMoveToCreateRoute == false) {
-            intent = new Intent(getApplicationContext(), SearchPlacesActivity.class);
+        if (blnMoveToCreateRoute == false)
+        {
+            intent = new Intent(getApplicationContext(), CreateRouteActivity.class);
             startActivity(intent);
             finish();
-        } else {
-            if (isAnyItemSelected() == false) {
+        }
+        else
+        {
+            if (isAnyItemSelected() == false)
+            {
                 Utilities.toastMessage("You need to select one place at least", getApplicationContext());
-            } else {
+            }
+            else
+            {
                 lstPlacesSelected = new ArrayList<>();
-                intent = new Intent(getApplicationContext(), CreateRouteActivity.class);
-                for (WalkAndSeePlace wasp : LoadingPlacesActivity.lstWalkAndSeePlaces) {
-                    if (wasp.isSelected() == true) {
+                intent = new Intent(getApplicationContext(), RouteActivity.class);
+                for (WalkAndSeePlace wasp : LoadingPlacesActivity.lstWalkAndSeePlaces)
+                {
+                    if (wasp.isSelected() == true)
+                    {
                         lstPlacesSelected.add(wasp);
                     }
                 }

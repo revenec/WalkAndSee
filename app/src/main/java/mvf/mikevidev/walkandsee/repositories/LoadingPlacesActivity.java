@@ -82,16 +82,14 @@ public class LoadingPlacesActivity extends AppCompatActivity {
     public LocationManager locationManager;
     public LocationListener locationListener;
     public Location locationUser;
-    public Map<String, Float> mapPlaceIdToDistanceCurrentLocation;
+
     public String strSpecificPlace;
     public int intRadiusFromScreen;
     public ArrayList<String> strPlaceTypeFromScreen;
     public static List<WalkAndSeePlace> lstWalkAndSeePlaces;
-    public static Map<String,WalkAndSeePlace> mapPlaceIdToWalkAndSeePlace;
     public static WalkAndSeePlace myPlaceToStartRoute;
     public int totalResults;
     public TextView tvMessage;
-    public HashMap<String,String> mapPlaceIdToPhotoReferences;
 
     //Manage database system
     public FirebaseDatabase firebaseDatabase;
@@ -188,28 +186,116 @@ public class LoadingPlacesActivity extends AppCompatActivity {
             }
             else
             {
-                //Set<String> lstPlaceIdsToProcess = (Set<String>) getPlaceIds(result);
-                ArrayList<String> placeIdsFromUrl = getPlaceIds(result);
-                getPlaceIdsToQueryGooglePlaces(placeIdsFromUrl);
+                getPlaceIds(result);
             }
 
             Log.i("Places: ", result);
         }
 
     }
-    //Method to move to the next activity not showing results
-    private void goToPlacesActivityWithNoResults()
-    {
-        WalkAndSeePlace wasRecord = new WalkAndSeePlace();
-        wasRecord.setPlaceName("No places found");
-        lstWalkAndSeePlaces.add(wasRecord);
-        Intent intent = new Intent(getApplicationContext(), PlacesActivity.class);
-        startActivity(intent);
-        finish();
-    }
 
+    //Get place id and distance from current location, so we can sort places by proximity
+    public ArrayList<String> getPlaceIds(String JSONString)
+    {
+        Log.i("TAG", "getPlaceIds ");
+        ArrayList<String> lstPlaceIds = new ArrayList<>();
+        ArrayList<String> lstPlaceCodes = new ArrayList<>();
+        Map<Float,Integer> mapDistanceToPositionList = new TreeMap<>();
+        Map<Integer,String> mapPositionListToPlaceId = new HashMap<>();
+        Map<String, Float> mapPlaceIdToDistanceCurrentLocation = new HashMap<>();
+        HashMap<String,String> mapPlaceIdToPhotoReferences = new HashMap<>();
+        HashMap<String,String> mapPlaceIdToPlaceCode = new HashMap<>();
+
+        int pos = 0;
+        lstWalkAndSeePlaces.clear();
+        //arrAdapter.notifyDataSetChanged();
+
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return lstPlaceIds;
+        }
+        Location locationEndPoint = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+        if(locationEndPoint == null)
+        {
+            locationEndPoint =  locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+        }
+        try {
+
+            for(String result : JSONString.split("___"))
+            {
+                result = result.replaceAll(" ","");
+                JSONObject jsonObject = new JSONObject(result);
+                JSONArray arrResults = jsonObject.getJSONArray("results");
+                for(int i = 0; i < arrResults.length();i++)
+                {
+                    Log.i("PLACE_URL_DESCRIPTION",arrResults.getJSONObject(i).toString());
+                    JSONObject info = arrResults.getJSONObject(i).getJSONObject("geometry");
+                    JSONObject infoLoc = info.getJSONObject("location");
+                    double latitude = (double) infoLoc.get("lat");
+                    double longitude = (double) infoLoc.get("lng");
+                    locationEndPoint.setLongitude(longitude);
+                    locationEndPoint.setLatitude(latitude);
+                    Log.i("LOCATION_USER",locationUser.toString());
+                    Log.i("LOCATION_END_POINT",locationEndPoint.toString());
+                    mapDistanceToPositionList.put(locationUser.distanceTo(locationEndPoint),pos);
+                    mapPositionListToPlaceId.put(pos,arrResults.getJSONObject(i).getString("place_id"));
+                    if(arrResults.getJSONObject(i).toString().contains("photos"))
+                    {
+                        JSONArray arrResultsPhotos = arrResults.getJSONObject(i).getJSONArray("photos");
+                        if(arrResultsPhotos.length() > 0)
+                        {
+                            mapPlaceIdToPhotoReferences.put(arrResults.getJSONObject(i).getString("place_id"),arrResultsPhotos.getJSONObject(0).getString("photo_reference"));
+                        }
+                    }
+                    //Get globalCode
+                    try
+                    {
+                        JSONObject infoCode = arrResults.getJSONObject(i).getJSONObject("plus_code");
+                        String infoGlobalCode = infoCode.getString("global_code").substring(0,6);
+                        mapPlaceIdToPlaceCode.put(arrResults.getJSONObject(i).getString("place_id"),infoGlobalCode);
+                        if(!lstPlaceCodes.contains(infoGlobalCode) && infoGlobalCode.length() <= 10)
+                        {
+                            lstPlaceCodes.add(infoGlobalCode);
+                        }
+                    }
+                    catch(Exception e)
+                    {
+                        Log.e("PLUS_CODE","Not founded: " + e.getMessage());
+                        lstPlaceCodes.add("");
+                    }
+
+                    pos++;
+                }
+            }
+
+            for(Float key : mapDistanceToPositionList.keySet())
+            {
+                lstPlaceIds.add(mapPositionListToPlaceId.get(mapDistanceToPositionList.get(key)));
+                mapPlaceIdToDistanceCurrentLocation.put(mapPositionListToPlaceId.get(mapDistanceToPositionList.get(key)),key);
+            }
+
+            Log.i("Photos",mapPlaceIdToPhotoReferences.toString());
+        } catch (JSONException e) {
+            e.printStackTrace();
+            finish();
+        }
+        //Get this value to find out when the process will finish, so we can order the places for distance in ascending order
+        this.totalResults = lstPlaceIds.size();
+        getPlaceIdsToQueryGooglePlaces(lstPlaceIds,lstPlaceCodes,mapPlaceIdToDistanceCurrentLocation,mapPlaceIdToPhotoReferences,mapPlaceIdToPlaceCode);
+        return lstPlaceIds;
+    }
     //Method to load places already exiting in the database in order to reduce to requests to google places
-    private void getPlaceIdsToQueryGooglePlaces(ArrayList<String> lstPlaceIds)
+    private void getPlaceIdsToQueryGooglePlaces(ArrayList<String> lstPlaceIds,
+                                                ArrayList<String> lstCodePlaces,
+                                                Map<String, Float> mapPlaceIdToDistanceCurrentLocation,
+                                                HashMap<String,String> mapPlaceIdToPhotoReferences,
+                                                HashMap<String,String> mapPlaceIdToPlaceCode)
     {
 
         Log.e("CURRENT_USER", FirebaseAuth.getInstance().getCurrentUser().getEmail());
@@ -219,9 +305,10 @@ public class LoadingPlacesActivity extends AppCompatActivity {
         if(!storagePath.exists()) {
             storagePath.mkdirs();
         }
-        firestore.collection("Places").whereIn("placeId",lstPlaceIds).orderBy("flDistanceFromOrigin").get()
-                .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
-                    ArrayList<String> lstPlaceIdsToReturn = (ArrayList<String>) lstPlaceIds.clone();
+        ArrayList<String> lstPlaceIdsToReturn = (ArrayList<String>) lstPlaceIds.clone();
+        firestore.collection("Places").whereIn("placeCode",lstCodePlaces).orderBy("placeAddress").get()
+                .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>()
+                {
                     @Override
                     public void onComplete(@NonNull Task<QuerySnapshot> task)
                     {
@@ -231,7 +318,19 @@ public class LoadingPlacesActivity extends AppCompatActivity {
                             {
                                 Log.i("getPlaceIdsToQueryGooglePlaces -> Data from FireStore", document.getId() + " => " + document.getData());
                                 WalkAndSeePlace wasp = document.toObject(WalkAndSeePlace.class);
+                                //Distance is not store in the system because the user could search for the same place but the location is different
+                                float fDistance;
+                                if(mapPlaceIdToDistanceCurrentLocation.get(wasp.getPlaceId()) != null)
+                                {
+                                    fDistance = mapPlaceIdToDistanceCurrentLocation.get(wasp.getPlaceId());
+                                }
+                                else
+                                {
+                                    fDistance = 0;
+                                }
 
+                                wasp.setPlaceDistance(Utilities.calculateDistance(fDistance));
+                                wasp.setFlDistanceFromOrigin(fDistance);
                                 //Get images and save the file in the local device to reduce the quantity of data in memory
                                 try {
 
@@ -242,18 +341,22 @@ public class LoadingPlacesActivity extends AppCompatActivity {
                                     }
                                     else
                                     {
-                                        File localFile = File.createTempFile("WalkAndSeeImages","jpg");
+                                        File localFile = File.createTempFile("Image",".jpg");
                                         stImagePlaces.child(wasp.getPlaceId() + ".jpg").getFile(localFile).addOnSuccessListener(new OnSuccessListener<FileDownloadTask.TaskSnapshot>() {
                                             @Override
                                             public void onSuccess(FileDownloadTask.TaskSnapshot taskSnapshot)
                                             {
+                                                Log.i("IMAGE","The image was found in the system - Path: " + localFile.getPath());
                                                 wasp.setPlacePhoto(BitmapFactory.decodeFile(localFile.getPath()));
                                             }
 
                                         })
-                                        .addOnFailureListener(new OnFailureListener() {
+                                        .addOnFailureListener(new OnFailureListener()
+                                        {
                                             @Override
-                                            public void onFailure(@NonNull Exception e) {
+                                            public void onFailure(@NonNull Exception e)
+                                            {
+                                                Log.e("IMAGE_ERROR","The image was not found in the system");
                                                 wasp.setPlacePhoto(BitmapFactory.decodeResource(getResources(), R.drawable.empty_house));
                                             }
                                         });
@@ -268,7 +371,7 @@ public class LoadingPlacesActivity extends AppCompatActivity {
                                 lstWalkAndSeePlaces.add(wasp);
                                 lstPlaceIdsToReturn.remove(wasp.getPlaceId());
                             }
-                            processPlaceIds(lstPlaceIdsToReturn);
+                            processPlaceIds(lstPlaceIdsToReturn,mapPlaceIdToDistanceCurrentLocation,mapPlaceIdToPhotoReferences,mapPlaceIdToPlaceCode);
                         }
                         else
                         {
@@ -292,8 +395,22 @@ public class LoadingPlacesActivity extends AppCompatActivity {
         Log.i("getPlaceIdsToQueryGooglePlaces: ","Places from origin: " + lstPlaceIds.toString());
 
     }
+    //Method to move to the next activity not showing results
+    private void goToPlacesActivityWithNoResults()
+    {
+        WalkAndSeePlace wasRecord = new WalkAndSeePlace();
+        wasRecord.setPlaceName("No places found");
+        lstWalkAndSeePlaces.add(wasRecord);
+        Intent intent = new Intent(getApplicationContext(), PlacesActivity.class);
+        startActivity(intent);
+        finish();
+    }
+
     //Method created to query the places not existing in Firebase by uso
-    public void processPlaceIds(ArrayList<String> lstPlaceIdsToQuery)
+    public void processPlaceIds(ArrayList<String> lstPlaceIdsToQuery,
+                                Map<String, Float> mapPlaceIdToDistanceCurrentLocation,
+                                HashMap<String,String> mapPlaceIdToPhotoReferences,
+                                HashMap<String,String> mapPlaceIdToPlaceCode)
     {
 
         if(!lstPlaceIdsToQuery.isEmpty())
@@ -301,7 +418,7 @@ public class LoadingPlacesActivity extends AppCompatActivity {
             for (String placeId : lstPlaceIdsToQuery)
             {
                 Log.i("PLACE_ID_REQUEST: ",placeId);
-                getPlace(placeId);
+                getPlace(placeId,mapPlaceIdToDistanceCurrentLocation,mapPlaceIdToPhotoReferences,mapPlaceIdToPlaceCode);
             }
         }
         else
@@ -310,6 +427,134 @@ public class LoadingPlacesActivity extends AppCompatActivity {
             moveToPlacesList();
         }
     }
+
+    public void getPlace(String placeId,Map<String,Float> mapPlaceIdToDistanceCurrentLocation,HashMap<String,String> mapPlaceIdToPhotoReferences,HashMap<String,String> mapPlaceIdToplaceCode) {
+
+        Trace.beginSection("SessionGetPlaces");
+
+        //Set the information we want to retrieve from google
+        List<Place.Field> placeFields = Arrays.asList(Place.Field.ID, Place.Field.NAME, Place.Field.ADDRESS, Place.Field.LAT_LNG, Place.Field.TYPES);
+
+        // Construct a request object, passing the place ID and fields array.
+        FetchPlaceRequest request = FetchPlaceRequest.newInstance(placeId, placeFields);
+
+        //Init places
+        if (!Places.isInitialized()) {
+            Places.initialize(getApplicationContext(), Utilities.key);
+        }
+        //Create client places and request places
+        PlacesClient placesClient = Places.createClient(getApplicationContext());
+        placesClient.fetchPlace(request).addOnSuccessListener((response) -> {
+            Place place = response.getPlace();
+            WalkAndSeePlace walkAndSeePlace;
+            Log.i("TAG", "Place found: " + place);
+
+            if (place.getLatLng() != null)
+            {
+                float flDistance = 0.00f;
+                if(mapPlaceIdToDistanceCurrentLocation.get(place.getId()) != null)
+                {
+                    flDistance = mapPlaceIdToDistanceCurrentLocation.get(place.getId());
+                }
+
+                Log.i("PLACE_ID_REQUEST_2: ",place.getId());
+                walkAndSeePlace = new WalkAndSeePlace(place.getName(), place.getId(), place.getLatLng().latitude,place.getLatLng().longitude, null, place.getAddress() ,flDistance,Utilities.calculateDistance(flDistance),mapPlaceIdToplaceCode.get(place.getId()));
+                //Get image from http request
+                if(mapPlaceIdToPhotoReferences.get(place.getId()) != null)
+                {
+                    DownloadImages downloadImages = new DownloadImages();
+                    String url = "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=" + mapPlaceIdToPhotoReferences.get(place.getId()) + "&key=" + Utilities.key;
+                    try {
+                        walkAndSeePlace.setPlacePhoto(downloadImages.execute(url).get());
+                        // Create a reference to "placeId.jpg"
+                        StorageReference placeRef = stImagePlaces.child(place.getId() + ".jpg");
+
+                        // Create a reference to 'Images/placeId.jpg'
+                        StorageReference placeImagesRef = stImagePlaces.child("Images/" + place.getId() + ".jpg");
+
+                        // While the file names are the same, the references point to different files
+                        placeRef.getName().equals(placeImagesRef.getName());    // true
+                        placeRef.getPath().equals(placeImagesRef.getPath());    // false
+
+                        //Store image in database
+                        ByteArrayOutputStream placeImageBytes = new ByteArrayOutputStream();
+                        walkAndSeePlace.getPlacePhoto().compress(Bitmap.CompressFormat.JPEG, 100, placeImageBytes);
+                        byte[] data = placeImageBytes.toByteArray();
+
+                        UploadTask uploadTask = placeRef.putBytes(data);
+                        uploadTask.addOnFailureListener(new OnFailureListener() {
+                            @Override
+                            public void onFailure(@NonNull Exception exception)
+                            {
+                                // Handle unsuccessful uploads
+                                Log.e("FAILED_UPLOAD","The image could not be uploaded");
+                            }
+                        }).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                            @Override
+                            public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                                // taskSnapshot.getMetadata() contains file metadata such as size, content-type, etc.
+                                Log.e("SUCCESS_UPLOAD","The image was uploaded: " + taskSnapshot.toString());
+                            }
+                        });
+                    } catch (ExecutionException e) {
+                        e.printStackTrace();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                Log.i("INFO_GOOGLE_GET", walkAndSeePlace.toString());
+
+                String strPlaceName = walkAndSeePlace.getPlaceName();
+                if (Utilities.isBlank(strPlaceName) || "null".equals(strPlaceName)) {
+                    strPlaceName = "Place not found";
+                }
+                else if(strPlaceName.length() > 38)
+                {
+                    strPlaceName = strPlaceName.substring(0,38) + "...";
+                }
+                walkAndSeePlace.setPlaceName(strPlaceName);
+                lstWalkAndSeePlaces.add(walkAndSeePlace);
+                //Add record to the database in Firebase
+
+                firestore.collection("Places").add(walkAndSeePlace.toMapInstance()).addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
+                    @Override
+                    public void onSuccess(DocumentReference documentReference) {
+                        Log.i("ADDED_SUCCESS:","Added successfully");
+                    }
+                }).addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Log.i("ADDED_FAILED:","Added failed: " + e.getMessage());
+                    }
+                });
+
+                //Create data to be showed in the list view
+                Log.i("Places2: ", walkAndSeePlace.toString());
+
+            }
+
+
+        }).addOnFailureListener((exception) -> {
+            if (exception instanceof ApiException) {
+                ApiException apiException = (ApiException) exception;
+                int statusCode = apiException.getStatusCode();
+                // Handle error with given status code.
+                Log.i("TAG", "Place not found: " + exception.getMessage());
+            }
+        }).addOnCompleteListener((task) -> {
+
+            if(this.totalResults == lstWalkAndSeePlaces.size())
+            {
+                Log.i("TAG", "Inside adapter and notify change");
+                moveToPlacesList();
+            }
+
+        });
+
+        Trace.endSection();
+    }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -330,8 +575,7 @@ public class LoadingPlacesActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_loading_places);
-        mapPlaceIdToDistanceCurrentLocation = new HashMap<>();
-        mapPlaceIdToPhotoReferences = new HashMap<>();
+
         locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
         intRadiusFromScreen = getIntent().getIntExtra("intRadius",0);
         strPlaceTypeFromScreen = (ArrayList<String>)getIntent().getSerializableExtra("placesType");
@@ -405,7 +649,7 @@ public class LoadingPlacesActivity extends AppCompatActivity {
             if (locationUser != null)
             {
                 LatLng myLatLng = new LatLng(locationUser.getLatitude(),locationUser.getLongitude());
-                myPlaceToStartRoute = new WalkAndSeePlace("", null, myLatLng.latitude,myLatLng.longitude, null, "" ,0.00f,"0 Mts");
+                myPlaceToStartRoute = new WalkAndSeePlace("", null, myLatLng.latitude,myLatLng.longitude, null, "" ,0.00f,"0 Mts","");
                 new Thread()
                 {
                     @Override
@@ -467,160 +711,6 @@ public class LoadingPlacesActivity extends AppCompatActivity {
 
     }
 
-    public void getPlace(String placeId) {
-
-        Trace.beginSection("SessionGetPlaces");
-
-        //Set the information we want to retrieve from google
-        List<Place.Field> placeFields = Arrays.asList(Place.Field.ID, Place.Field.NAME, Place.Field.ADDRESS, Place.Field.LAT_LNG, Place.Field.TYPES);
-
-        // Construct a request object, passing the place ID and fields array.
-        FetchPlaceRequest request = FetchPlaceRequest.newInstance(placeId, placeFields);
-
-        //Init places
-        if (!Places.isInitialized()) {
-            Places.initialize(getApplicationContext(), Utilities.key);
-        }
-        //Create client places and request places
-        PlacesClient placesClient = Places.createClient(getApplicationContext());
-        placesClient.fetchPlace(request).addOnSuccessListener((response) -> {
-            Place place = response.getPlace();
-            WalkAndSeePlace walkAndSeePlace;
-            Log.i("TAG", "Place found: " + place);
-
-            if (place.getLatLng() != null)
-            {
-                //Get list of places to operate in the future
-                String distanceFormatted = "";
-                float flDistance = 0.00f;
-                if(mapPlaceIdToDistanceCurrentLocation.get(place.getId()) != null)
-                {
-                    flDistance = mapPlaceIdToDistanceCurrentLocation.get(place.getId());
-                    if(flDistance < 1000)
-                    {
-                        distanceFormatted = String.valueOf(Math.round(flDistance));
-                    }
-                    else
-                    {
-                        distanceFormatted = String.valueOf((Math.round((flDistance / 1000)* 100.00) / 100.00));
-                        try
-                        {
-                            Log.i("DISTANCE_STR",distanceFormatted);
-                            Log.i("DISTANCE_STR_L",String.valueOf(distanceFormatted.split(".").length));
-                            if(distanceFormatted.split("\\.").length == 1)
-                            {
-                                Log.i("DISTANCE_STR","inside option 1");
-                                distanceFormatted += ".00";
-                            }
-                            else if(distanceFormatted.split("\\.").length == 2 && distanceFormatted.split("\\.")[1].length() < 2)
-                            {
-                                Log.i("DISTANCE_STR","inside option 2");
-                                distanceFormatted += "0";
-                            }
-                        }
-                        catch(Exception e)
-                        {
-                            distanceFormatted = "No distance available";
-                        }
-                    }
-
-                }
-
-                Log.i("PLACE_ID_REQUEST_2: ",place.getId());
-                walkAndSeePlace = new WalkAndSeePlace(place.getName(), place.getId(), place.getLatLng().latitude,place.getLatLng().longitude, null, place.getAddress() ,mapPlaceIdToDistanceCurrentLocation.get(place.getId()),distanceFormatted + (flDistance < 1000 ? " Mts" : " Kms"));
-                //Get image from http request
-                if(mapPlaceIdToPhotoReferences.get(place.getId()) != null)
-                {
-                    DownloadImages downloadImages = new DownloadImages();
-                    String url = "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=" + mapPlaceIdToPhotoReferences.get(place.getId()) + "&key=" + Utilities.key;
-                    try {
-                        walkAndSeePlace.setPlacePhoto(downloadImages.execute(url).get());
-                        // Create a reference to "placeId.jpg"
-                        StorageReference placeRef = stImagePlaces.child(place.getId() + ".jpg");
-
-                        // Create a reference to 'Images/placeId.jpg'
-                        StorageReference placeImagesRef = stImagePlaces.child("Images/" + place.getId() + ".jpg");
-
-                        // While the file names are the same, the references point to different files
-                        placeRef.getName().equals(placeImagesRef.getName());    // true
-                        placeRef.getPath().equals(placeImagesRef.getPath());    // false
-
-                        //Store image in database
-                        ByteArrayOutputStream placeImageBytes = new ByteArrayOutputStream();
-                        walkAndSeePlace.getPlacePhoto().compress(Bitmap.CompressFormat.JPEG, 100, placeImageBytes);
-                        byte[] data = placeImageBytes.toByteArray();
-
-                        UploadTask uploadTask = placeRef.putBytes(data);
-                        uploadTask.addOnFailureListener(new OnFailureListener() {
-                            @Override
-                            public void onFailure(@NonNull Exception exception) {
-                                // Handle unsuccessful uploads
-                            }
-                        }).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
-                            @Override
-                            public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-                                // taskSnapshot.getMetadata() contains file metadata such as size, content-type, etc.
-                                // ...
-                            }
-                        });
-                    } catch (ExecutionException e) {
-                        e.printStackTrace();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-
-                Log.i("INFO_GOOGLE_GET", walkAndSeePlace.toString());
-                lstWalkAndSeePlaces.add(walkAndSeePlace);
-
-                String strPlaceName = walkAndSeePlace.getPlaceName();
-                if (Utilities.isBlank(strPlaceName) || "null".equals(strPlaceName)) {
-                    strPlaceName = "Place not found";
-                }
-                else if(strPlaceName.length() > 38)
-                {
-                    strPlaceName = strPlaceName.substring(0,38) + "...";
-                }
-                walkAndSeePlace.setPlaceName(strPlaceName);
-                //Add record to the database in Firebase
-
-                firestore.collection("Places").add(walkAndSeePlace.toMapInstance()).addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
-                    @Override
-                    public void onSuccess(DocumentReference documentReference) {
-                        Log.i("ADDED_SUCCESS:","Added successfully");
-                    }
-                }).addOnFailureListener(new OnFailureListener() {
-                    @Override
-                    public void onFailure(@NonNull Exception e) {
-                        Log.i("ADDED_FAILED:","Added failed: " + e.getMessage());
-                    }
-                });
-
-                //Create data to be showed in the list view
-                Log.i("Places2: ", walkAndSeePlace.toString());
-
-            }
-
-
-        }).addOnFailureListener((exception) -> {
-            if (exception instanceof ApiException) {
-                ApiException apiException = (ApiException) exception;
-                int statusCode = apiException.getStatusCode();
-                // Handle error with given status code.
-                Log.i("TAG", "Place not found: " + exception.getMessage());
-            }
-        }).addOnCompleteListener((task) -> {
-
-            if(this.totalResults == lstWalkAndSeePlaces.size())
-            {
-                Log.i("TAG", "Inside adapter and notify change");
-                moveToPlacesList();
-            }
-
-        });
-
-        Trace.endSection();
-    }
     //Method to move to places list, this can be called from PostExecute method in DownloadData(if there is no place to retrieve in google maps)or onComplete method in getPlace
     private void moveToPlacesList()
     {
@@ -631,78 +721,6 @@ public class LoadingPlacesActivity extends AppCompatActivity {
         intent.putExtra("intRadius",intRadiusFromScreen);
         startActivity(intent);
         finish();
-    }
-
-    //Get place id and distance from current location, so we can sort places by proximity
-    public ArrayList<String> getPlaceIds(String JSONString)
-    {
-        Log.i("TAG", "getPlaceIds ");
-        ArrayList<String> lstPlaceIds = new ArrayList<>();
-        Map<Float,Integer> mapDistanceToPositionList = new TreeMap<>();
-        Map<Integer,String> mapPositionListToPlaceId = new HashMap<>();
-        int pos = 0;
-        lstWalkAndSeePlaces.clear();
-        //arrAdapter.notifyDataSetChanged();
-
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
-            return lstPlaceIds;
-        }
-        Location locationEndPoint = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
-        if(locationEndPoint == null)
-        {
-            locationEndPoint =  locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-        }
-        try {
-
-            for(String results : JSONString.split("___"))
-            {
-                JSONObject jsonObject = new JSONObject(results);
-                JSONArray arrResults = jsonObject.getJSONArray("results");
-                for(int i = 0; i < arrResults.length();i++)
-                {
-                    JSONObject info = arrResults.getJSONObject(i).getJSONObject("geometry");
-                    JSONObject infoLoc = info.getJSONObject("location");
-                    double latitude = (double) infoLoc.get("lat");
-                    double longitude = (double) infoLoc.get("lng");
-                    locationEndPoint.setLongitude(longitude);
-                    locationEndPoint.setLatitude(latitude);
-                    Log.i("LOCATION_USER",locationUser.toString());
-                    Log.i("LOCATION_END_POINT",locationEndPoint.toString());
-                    mapDistanceToPositionList.put(locationUser.distanceTo(locationEndPoint),pos);
-                    mapPositionListToPlaceId.put(pos,arrResults.getJSONObject(i).getString("place_id"));
-                    if(arrResults.getJSONObject(i).toString().contains("photos"))
-                    {
-                        JSONArray arrResultsPhotos = arrResults.getJSONObject(i).getJSONArray("photos");
-                        if(arrResultsPhotos.length() > 0)
-                        {
-                            mapPlaceIdToPhotoReferences.put(arrResults.getJSONObject(i).getString("place_id"),arrResultsPhotos.getJSONObject(0).getString("photo_reference"));
-                        }
-                    }
-
-                    pos++;
-                }
-            }
-
-            for(Float key : mapDistanceToPositionList.keySet())
-            {
-                lstPlaceIds.add(mapPositionListToPlaceId.get(mapDistanceToPositionList.get(key)));
-                mapPlaceIdToDistanceCurrentLocation.put(mapPositionListToPlaceId.get(mapDistanceToPositionList.get(key)),key);
-            }
-            Log.i("Photos",mapPlaceIdToPhotoReferences.toString());
-        } catch (JSONException e) {
-            e.printStackTrace();
-            finish();
-        }
-        //Get this value to find out when the process will finish, so we can order the places for distance in ascending order
-        this.totalResults = lstPlaceIds.size();
-        return lstPlaceIds;
     }
 
     @Override

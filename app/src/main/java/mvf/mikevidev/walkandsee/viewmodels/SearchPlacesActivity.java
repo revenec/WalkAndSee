@@ -33,6 +33,7 @@ import com.google.android.gms.maps.model.MarkerOptions;
 
 import java.util.ArrayList;
 
+import mvf.mikevidev.walkandsee.Utilities.FinderHelper;
 import mvf.mikevidev.walkandsee.repositories.LoadingPlacesActivity;
 import mvf.mikevidev.walkandsee.R;
 import mvf.mikevidev.walkandsee.Utilities.Utilities;
@@ -52,17 +53,6 @@ public class SearchPlacesActivity extends FragmentActivity implements OnMapReady
     public CheckBox cbShowBars;
     public CheckBox cbOnlyOpen;
 
-    public static final String MUSEUM_TYPE = "museum";
-    public static final String PARK_TYPE = "park";
-    public static final String RESTAURANT_TYPE = "restaurant";
-    public static final String NIGHT_CLUB_TYPE = "night_club";
-    public static final String BAR_TYPE = "bar";
-    public static final int MAX_RADIUS = 5000;
-    public static final int MIN_RADIUS = 100;
-    public static final int INCREASE_RADIUS = 50;
-    public static final float MIN_ZOOM = 11.8f;
-    public static float MAX_ZOOM = 17.45f;
-
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -80,7 +70,7 @@ public class SearchPlacesActivity extends FragmentActivity implements OnMapReady
             }
             if (locationUser != null) {
                 // Add a marker in Sydney and move the camera
-                sbRadious.setProgress(MIN_RADIUS);
+                sbRadious.setProgress(FinderHelper.MIN_RADIUS);
                 increaseAndDecreaseZoom(sbRadious.getProgress(),true);
 
             }
@@ -99,38 +89,38 @@ public class SearchPlacesActivity extends FragmentActivity implements OnMapReady
         boolean isOptionSelected = false;
         if(cbShowAll.isChecked())
         {
-            params.add(MUSEUM_TYPE);
-            params.add(PARK_TYPE);
-            params.add(RESTAURANT_TYPE);
-            params.add(NIGHT_CLUB_TYPE);
-            params.add(BAR_TYPE);
+            params.add(FinderHelper.MUSEUM_TYPE);
+            params.add(FinderHelper.PARK_TYPE);
+            params.add(FinderHelper.RESTAURANT_TYPE);
+            params.add(FinderHelper.NIGHT_CLUB_TYPE);
+            params.add(FinderHelper.BAR_TYPE);
             isOptionSelected = true;
         }
         else
         {
             if(cbShowRestaurants.isChecked())
             {
-                params.add(RESTAURANT_TYPE);
+                params.add(FinderHelper.RESTAURANT_TYPE);
                 isOptionSelected = true;
             }
             if(cbShowParks.isChecked())
             {
-                params.add(PARK_TYPE);
+                params.add(FinderHelper.PARK_TYPE);
                 isOptionSelected = true;
             }
             if(cbShowMuseums.isChecked())
             {
-                params.add(MUSEUM_TYPE);
+                params.add(FinderHelper.MUSEUM_TYPE);
                 isOptionSelected = true;
             }
             if(cbShowNightClubs.isChecked())
             {
-                params.add(NIGHT_CLUB_TYPE);
+                params.add(FinderHelper.NIGHT_CLUB_TYPE);
                 isOptionSelected = true;
             }
             if(cbShowBars.isChecked())
             {
-                params.add(BAR_TYPE);
+                params.add(FinderHelper.BAR_TYPE);
                 isOptionSelected = true;
             }
         }
@@ -182,7 +172,7 @@ public class SearchPlacesActivity extends FragmentActivity implements OnMapReady
             public void onLocationChanged(Location location)
             {
                 locationUser = location;
-                sbRadious.setProgress(MIN_RADIUS);
+                sbRadious.setProgress(FinderHelper.MIN_RADIUS);
                 increaseAndDecreaseZoom(sbRadious.getProgress(),true);
             }
 
@@ -208,10 +198,10 @@ public class SearchPlacesActivity extends FragmentActivity implements OnMapReady
         switch(size.x)
         {
             case 1440:
-                MAX_ZOOM = 17.8f;
+                FinderHelper.MAX_ZOOM = 17.8f;
                 break;
             case 480:
-                MAX_ZOOM = 17.3f;
+                FinderHelper.MAX_ZOOM = 17.3f;
                 cbShowAll.setTextSize(12);
                 cbShowRestaurants.setTextSize(12);
                 cbShowParks.setTextSize(12);
@@ -238,9 +228,9 @@ public class SearchPlacesActivity extends FragmentActivity implements OnMapReady
         mMap = googleMap;
 
         sbRadious = findViewById(R.id.sbDistance);
-        sbRadious.setMax(MAX_RADIUS);
-        sbRadious.setMin(MIN_RADIUS);
-        sbRadious.setProgress(INCREASE_RADIUS);
+        sbRadious.setMax(FinderHelper.MAX_RADIUS);
+        sbRadious.setMin(FinderHelper.MIN_RADIUS);
+        sbRadious.setProgress(FinderHelper.INCREASE_RADIUS);
         sbRadious.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser)
@@ -273,7 +263,7 @@ public class SearchPlacesActivity extends FragmentActivity implements OnMapReady
             }
             if (locationUser != null) {
                 // Add a marker in Sydney and move the camera
-                sbRadious.setProgress(MIN_RADIUS);
+                sbRadious.setProgress(FinderHelper.MIN_RADIUS);
                 increaseAndDecreaseZoom(sbRadious.getProgress(),true);
 
             }
@@ -292,54 +282,12 @@ public class SearchPlacesActivity extends FragmentActivity implements OnMapReady
         mMap.addMarker(new MarkerOptions().position(currentLocation).title("You are here").icon(BitmapDescriptorFactory.fromResource(R.drawable.lognoletters1_logo)).anchor(0.5f,0.5f));
         if(blnUseDynamic)
         {
-            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLocation,MAX_ZOOM));
+            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLocation,FinderHelper.MAX_ZOOM));
         }
         else
         {
-            //The zoom will be between 20 (max zoom allowed in Google maps) and the minimun which adjust to the screen
 
-            float flzoom = 0f;
-            if(barProgress == MIN_RADIUS)
-            {
-                flzoom = MAX_ZOOM;
-            }
-            else if(barProgress > MIN_RADIUS && barProgress <= 150)
-            {
-                flzoom = MAX_ZOOM - 0.5f;
-            }
-            else if(barProgress > 150 && barProgress <= 500)
-            {
-                flzoom = MAX_ZOOM - 2.2f;
-            }
-            else if(barProgress > 500 && barProgress <= 700)
-            {
-                flzoom = MAX_ZOOM - 2.8f;
-            }
-            else if(barProgress > 700 && barProgress <= 1200)
-            {
-                flzoom = MAX_ZOOM - 3.5f;
-            }
-            else if(barProgress > 1200 && barProgress < 4900)
-            {
-                //The zoom will be between 20 (max zoom allowed in Google maps) and the minimun which adjust to the screen
-                float flZoomThreshold = (MAX_ZOOM - 3.5f) - MIN_ZOOM;
-                float percentatgeProgress = (barProgress * 100) / (MAX_RADIUS - MIN_RADIUS);
-                float substract = flZoomThreshold * (percentatgeProgress / 100);
-                //Calculate the percentage to discount to the max zoom based on the percentage we increase the radius and considering the threshold
-                if(barProgress > 2500 && barProgress < 4500)
-                {
-                    substract += 0.2f;
-                }
-                flzoom = (MAX_ZOOM - 3.5f) - substract;
-            }
-            else
-            {
-                flzoom = MIN_ZOOM;
-            }
-            //Log.i("increaseAndDecreaseZoom","substract: " + substract);
-            Log.i("increaseAndDecreaseZoom","Progress: " + barProgress);
-            Log.i("increaseAndDecreaseZoom","flzoom: " + flzoom);
-            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation,flzoom));
+            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation,FinderHelper.getMapZoom(barProgress)));
         }
 
         mMap.addCircle(new CircleOptions()

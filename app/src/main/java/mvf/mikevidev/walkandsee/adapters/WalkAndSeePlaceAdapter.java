@@ -80,10 +80,12 @@ public class WalkAndSeePlaceAdapter extends RecyclerView.Adapter<WalkAndSeePlace
                 if(was.isSelected() == true)
                 {
                     buttonView.setButtonDrawable(R.drawable.placeselectedlogo);
+                    was.setSelected(true);
                 }
                 else
                 {
                     buttonView.setButtonDrawable(R.drawable.placeunselectedlogo);
+                    was.setSelected(false);
                 }
 
             }

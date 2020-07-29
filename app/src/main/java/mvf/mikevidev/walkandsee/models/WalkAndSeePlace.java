@@ -21,10 +21,11 @@ public class WalkAndSeePlace implements Comparable<WalkAndSeePlace>
     public int intPositionInRoute;
     public Double placeLat;
     public Double placeLon;
+    public String placeCode;
 
     public WalkAndSeePlace(){}
 
-    public WalkAndSeePlace(String placeName, String placeId, Double placeLat, Double placeLon, Bitmap placePhoto,String placeAddress, float flDistanceFromOrigin, String placeDistance)
+    public WalkAndSeePlace(String placeName, String placeId, Double placeLat, Double placeLon, Bitmap placePhoto,String placeAddress, float flDistanceFromOrigin, String placeDistance, String placeCode)
     {
         this.placeId = placeId;
         this.placeName = placeName;
@@ -36,6 +37,7 @@ public class WalkAndSeePlace implements Comparable<WalkAndSeePlace>
         this.placeDistance = placeDistance;
         this.isSelected = false;
         this.intPositionInRoute = 0;
+        this.placeCode = placeCode;
     }
 
     public String getPlaceName() {
@@ -114,6 +116,11 @@ public class WalkAndSeePlace implements Comparable<WalkAndSeePlace>
     public void setPlaceLon(Double placeLon) {
         this.placeLon = placeLon;
     }
+
+    public String getPlaceCode() {return placeCode;}
+
+    public void setPlaceCode(String placeCode) {this.placeCode = placeCode;}
+
     @Override
     public String toString() {
         return "Place{" +
@@ -122,7 +129,7 @@ public class WalkAndSeePlace implements Comparable<WalkAndSeePlace>
                 ", placeLocation=" + placeLocation +
                 ", placePhoto='" +  placePhoto + '\'' +
                 ", placeAddress='" +  placeAddress + '\'' +
-                ", placeAddress='" +  flDistanceFromOrigin + '\'' +
+                ", flDistanceFromOrigin='" +  flDistanceFromOrigin + '\'' +
                 '}';
     }
 
@@ -143,9 +150,8 @@ public class WalkAndSeePlace implements Comparable<WalkAndSeePlace>
         mapToReturn.put("placeLat",this.placeLat);
         mapToReturn.put("placeLon",this.placeLon);
         mapToReturn.put("placeAddress",this.placeAddress);
-        mapToReturn.put("flDistanceFromOrigin",this.flDistanceFromOrigin);
-        mapToReturn.put("placeDistance",this.placeDistance);
         mapToReturn.put("isSelected",this.isSelected);
+        mapToReturn.put("placeCode",this.placeCode);
         mapToReturn.put("intPositionInRoute",this.intPositionInRoute);
         return mapToReturn;
     }

@@ -13,6 +13,7 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 import mvf.mikevidev.walkandsee.R;
+import mvf.mikevidev.walkandsee.Utilities.FinderHelper;
 import mvf.mikevidev.walkandsee.models.WalkAndSeePlace;
 import mvf.mikevidev.walkandsee.repositories.LoadingPlacesActivity;
 
@@ -41,16 +42,23 @@ public class RouteActivity extends FragmentActivity implements OnMapReadyCallbac
      */
     @Override
     public void onMapReady(GoogleMap googleMap) {
+        int intMaxDistance = 0;
         mMap = googleMap;
 
         // Add a marker in Sydney and move the camera
         LatLng startLocation = new LatLng(LoadingPlacesActivity.myPlaceToStartRoute.getPlaceLat(), LoadingPlacesActivity.myPlaceToStartRoute.getPlaceLon());
         mMap.addMarker(new MarkerOptions().position(startLocation).title("You are here"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(startLocation));
 
         for(WalkAndSeePlace wasp : PlacesActivity.lstPlacesSelected)
         {
             mMap.addMarker(new MarkerOptions().position(startLocation).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)).title(wasp.getPlaceName()));
+            int intFromOrigin = (int) wasp.getFlDistanceFromOrigin();
+            if(intFromOrigin > intMaxDistance)
+            {
+                intMaxDistance = intFromOrigin;
+            }
         }
+
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(startLocation, FinderHelper.getMapZoom(intMaxDistance)));
     }
 }
