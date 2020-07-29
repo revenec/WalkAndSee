@@ -14,10 +14,10 @@ import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 import java.util.ArrayList;
 
-import mvf.mikevidev.walkandsee.Utilities.CreateRouteActivity;
+import mvf.mikevidev.walkandsee.UtilitiesWalkAndSee.CreateRouteActivity;
 import mvf.mikevidev.walkandsee.repositories.LoadingPlacesActivity;
 import mvf.mikevidev.walkandsee.R;
-import mvf.mikevidev.walkandsee.Utilities.Utilities;
+import mvf.mikevidev.walkandsee.UtilitiesWalkAndSee.Utilities;
 import mvf.mikevidev.walkandsee.adapters.WalkAndSeePlaceAdapter;
 import mvf.mikevidev.walkandsee.models.WalkAndSeePlace;
 

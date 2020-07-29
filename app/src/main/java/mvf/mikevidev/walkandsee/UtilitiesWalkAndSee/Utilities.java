@@ -1,4 +1,4 @@
-package mvf.mikevidev.walkandsee.Utilities;
+package mvf.mikevidev.walkandsee.UtilitiesWalkAndSee;
 
 import android.content.Context;
 import android.util.Log;

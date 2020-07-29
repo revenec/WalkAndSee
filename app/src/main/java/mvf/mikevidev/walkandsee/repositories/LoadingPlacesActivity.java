@@ -58,7 +58,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.lang.reflect.Array;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.ProtocolException;
@@ -73,7 +72,7 @@ import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
 
 import mvf.mikevidev.walkandsee.R;
-import mvf.mikevidev.walkandsee.Utilities.Utilities;
+import mvf.mikevidev.walkandsee.UtilitiesWalkAndSee.Utilities;
 import mvf.mikevidev.walkandsee.models.WalkAndSeePlace;
 import mvf.mikevidev.walkandsee.viewmodels.PlacesActivity;
 

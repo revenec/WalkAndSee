@@ -16,7 +16,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.FirebaseDatabase;
 
-import mvf.mikevidev.walkandsee.Utilities.Utilities;
+import mvf.mikevidev.walkandsee.UtilitiesWalkAndSee.Utilities;
 import mvf.mikevidev.walkandsee.viewmodels.SearchPlacesActivity;
 
 public class MainActivity extends AppCompatActivity {

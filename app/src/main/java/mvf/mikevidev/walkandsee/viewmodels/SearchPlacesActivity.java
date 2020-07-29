@@ -33,10 +33,10 @@ import com.google.android.gms.maps.model.MarkerOptions;
 
 import java.util.ArrayList;
 
-import mvf.mikevidev.walkandsee.Utilities.FinderHelper;
+import mvf.mikevidev.walkandsee.UtilitiesWalkAndSee.FinderHelper;
 import mvf.mikevidev.walkandsee.repositories.LoadingPlacesActivity;
 import mvf.mikevidev.walkandsee.R;
-import mvf.mikevidev.walkandsee.Utilities.Utilities;
+import mvf.mikevidev.walkandsee.UtilitiesWalkAndSee.Utilities;
 
 public class SearchPlacesActivity extends FragmentActivity implements OnMapReadyCallback {
 

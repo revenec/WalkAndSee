@@ -1,4 +1,4 @@
-package mvf.mikevidev.walkandsee.Utilities;
+package mvf.mikevidev.walkandsee.UtilitiesWalkAndSee;
 
 import androidx.appcompat.app.AppCompatActivity;
 
