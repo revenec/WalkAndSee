@@ -51,7 +51,7 @@ public class RouteActivity extends FragmentActivity implements OnMapReadyCallbac
 
         for(WalkAndSeePlace wasp : PlacesActivity.lstPlacesSelected)
         {
-            mMap.addMarker(new MarkerOptions().position(startLocation).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)).title(wasp.getPlaceName()));
+            mMap.addMarker(new MarkerOptions().position(wasp.getPlaceLocation()).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)).title(wasp.getPlaceName()));
             int intFromOrigin = (int) wasp.getFlDistanceFromOrigin();
             if(intFromOrigin > intMaxDistance)
             {

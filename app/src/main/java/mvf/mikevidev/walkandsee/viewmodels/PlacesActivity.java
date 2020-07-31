@@ -53,6 +53,7 @@ public class PlacesActivity extends AppCompatActivity {
 
         if (isAllSelected == false) {
             item.setTitle("Deselect All");
+
             for (WalkAndSeePlace wasp : LoadingPlacesActivity.lstWalkAndSeePlaces)
             {
                 wasp.setSelected(true);

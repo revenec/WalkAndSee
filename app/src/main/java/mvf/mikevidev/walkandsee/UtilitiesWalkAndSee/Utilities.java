@@ -25,7 +25,7 @@ public class Utilities
     {
         Toast.makeText(context,text,Toast.LENGTH_SHORT).show();
     }
-
+    //This method will format the distance to be presented to the user
     public static String calculateDistance(float flDistance)
     {
         //Get list of places to operate in the future

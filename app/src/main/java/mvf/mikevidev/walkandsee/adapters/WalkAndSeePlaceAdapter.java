@@ -18,6 +18,7 @@ import java.util.List;
 import mvf.mikevidev.walkandsee.repositories.LoadingPlacesActivity;
 import mvf.mikevidev.walkandsee.R;
 import mvf.mikevidev.walkandsee.models.WalkAndSeePlace;
+import mvf.mikevidev.walkandsee.viewmodels.PlacesActivity;
 
 public class WalkAndSeePlaceAdapter extends RecyclerView.Adapter<WalkAndSeePlaceAdapter.MyViewHolder> {
     private List<WalkAndSeePlace> mDataset;
@@ -70,22 +71,25 @@ public class WalkAndSeePlaceAdapter extends RecyclerView.Adapter<WalkAndSeePlace
         holder.tvAddressPlace.setText(mDataset.get(position).getPlaceAddress());
         holder.tvDistance.setText(mDataset.get(position).getPlaceDistance());
         holder.ivSelected.setChecked(false);
+        if(PlacesActivity.isAllSelected == true)
+        {
+            holder.ivSelected.setChecked(true);
+        }
         holder.ivSelected.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked)
             {
                 Log.i("INSIDE_CHECK","Inside check");
+                Log.i("INSIDE_CHECK","Value coming: " + isChecked);
                 WalkAndSeePlace was = mDataset.get(position);
                 was.setSelected(isChecked);
                 if(was.isSelected() == true)
                 {
-                    buttonView.setButtonDrawable(R.drawable.placeselectedlogo);
-                    was.setSelected(true);
+                    holder.ivSelected.setButtonDrawable(R.drawable.placeselectedlogo);
                 }
                 else
                 {
-                    buttonView.setButtonDrawable(R.drawable.placeunselectedlogo);
-                    was.setSelected(false);
+                    holder.ivSelected.setButtonDrawable(R.drawable.placeunselectedlogo);
                 }
 
             }
@@ -99,8 +103,6 @@ public class WalkAndSeePlaceAdapter extends RecyclerView.Adapter<WalkAndSeePlace
         {
             Log.i("PHOTO",photo.toString());
             photo = photo.copy(Bitmap.Config.RGBA_F16, true);
-            //photo.setWidth(50);
-            //photo.setHeight(50);
             photo = photo.copy(Bitmap.Config.RGBA_F16, false);
             holder.ivImagePlace.setImageBitmap(photo);
         }
